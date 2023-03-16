@@ -25,7 +25,5 @@ public class CMServerApp {
         CMServerStub cmStub = server.getServerStub();  // CMServerApp 객체의 getServerStub 메소드 실행, m_serverStub(CMServerStub 객체) 반환
         cmStub.setAppEventHandler(server.getServerEventHandler());  // ???
         cmStub.startCM();
-
-        System.out.println("깃허브 연결 테스트");
     }
 }
