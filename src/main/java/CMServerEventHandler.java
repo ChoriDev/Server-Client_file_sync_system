@@ -1,5 +1,7 @@
 import kr.ac.konkuk.ccslab.cm.*;
+import kr.ac.konkuk.ccslab.cm.event.*;
 import kr.ac.konkuk.ccslab.cm.event.handler.CMAppEventHandler;
+import kr.ac.konkuk.ccslab.cm.info.CMInfo;
 import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 
 public class CMServerEventHandler implements CMAppEventHandler {
@@ -10,5 +12,24 @@ public class CMServerEventHandler implements CMAppEventHandler {
     }
 
     @Override
-    public void processEvent(CMEvent cme)
+    public void processEvent(CMEvent cme) {
+        switch(cme.getType()) {
+            case CMInfo.CM_SESSION_EVENT:
+                processSessionEvent(cme);
+                break;
+            default:
+                return;
+        }
+    }
+
+    private void processSessionEvent(CMEvent cme) {
+        CMSessionEvent se = (CMSessionEvent) cme;
+        switch(se.getID()) {
+            case CMSessionEvent.LOGIN:
+                System.out.println("[" + se.getUserName() + "] requests login.");
+                break;
+            default:
+                return;
+        }
+    }
 }

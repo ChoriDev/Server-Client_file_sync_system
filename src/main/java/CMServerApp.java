@@ -22,7 +22,7 @@ public class CMServerApp {
     public static void main(String[] args) {
         CMServerApp server = new CMServerApp();  // CMServerApp 객체 생성
         CMServerStub cmStub = server.getServerStub();  // CMServerApp 객체의 getServerStub 메소드 실행, m_serverStub(CMServerStub 객체) 반환
-        cmStub.setAppEventHandler(server.getServerEventHandler());  // ???
-        cmStub.startCM();
+        cmStub.setAppEventHandler(server.getServerEventHandler());  // ??? CM Stub에 Event Handler 설정
+        cmStub.startCM();  // CM이 CM Server Configuration 파일로 초기화 후 실행
     }
 }
