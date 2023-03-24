@@ -29,10 +29,12 @@ public class CMClientEventHandler implements CMAppEventHandler {  // ??? CMAppEv
             case CMSessionEvent.LOGIN_ACK:
                 if(se.isValidUser() == 0) {
                     System.err.println("서버에 의해 인증이 실패되었습니다.");
+                    System.err.println("다시 시도하세요.");
                     // 로그인 실패 시 다시 로그인할 수 있는 방법 찾기
                 }
                 else if (se.isValidUser() == -1) {
                     System.err.println("이미 로그인되어 있습니다.");
+                    System.err.println("다시 시도하세요.");
                     // 로그인 실패 시 다시 로그인할 수 있는 방법 찾기
                 }
                 else {

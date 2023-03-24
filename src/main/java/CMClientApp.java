@@ -95,7 +95,7 @@ public class CMClientApp {
         System.out.println("다음으로 실행할 API를 입력하세요.");
         scanner.nextLine();
 
-        // terminate CM
+        // CM 중료
 //        System.out.println("CM과 서버에 접속을 종료하려면 입력하세요.");
 //        scanner.nextLine();
 //        cmStub.terminateCM();

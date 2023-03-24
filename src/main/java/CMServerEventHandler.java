@@ -42,7 +42,6 @@ public class CMServerEventHandler implements CMAppEventHandler {
 //                        m_serverStub.replyEvent(se, 1);
 //                    }
 //                }
-
                 break;
             case CMSessionEvent.LOGOUT:
                 System.out.println("[" + se.getUserName() + "] 접속 해제했습니다.");

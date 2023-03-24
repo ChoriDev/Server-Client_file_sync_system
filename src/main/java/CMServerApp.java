@@ -34,7 +34,8 @@ public class CMServerApp {
         } else {
             System.out.println("CM 초기화 오류.");
         }
-
+        
+        // CM 서버 종료
         System.out.println("CM과 서버에 접속을 종료하려면 입력하세요.");
         scanner.nextLine();
         cmStub.terminateCM();
