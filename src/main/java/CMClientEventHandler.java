@@ -28,7 +28,7 @@ public class CMClientEventHandler implements CMAppEventHandler {  // ??? CMAppEv
         switch (se.getID()) {
             case CMSessionEvent.LOGIN_ACK:
                 if(se.isValidUser() == 0) {
-                    System.err.println("서버에 의해 인증이 실패되었습니다.");
+                    System.err.println("서버에 의해 인증이 실패했습니다.");
                     System.err.println("다시 시도하세요.");
                     // 로그인 실패 시 다시 로그인할 수 있는 방법 찾기
                 }
@@ -42,11 +42,15 @@ public class CMClientEventHandler implements CMAppEventHandler {  // ??? CMAppEv
                 }
                 break;
             case CMSessionEvent.SESSION_ADD_USER:_USER:
-            System.out.println("[" + se.getUserName() + "] 접속했습니다.");
+                System.out.println("[" + se.getUserName() + "] 서버에 접속했습니다.");
                 break;
             case CMSessionEvent.SESSION_REMOVE_USER:_USER:
-                System.out.println("[" + se.getUserName() + "] 접속 해제했습니다.");
+                System.out.println("[" + se.getUserName() + "] 서버에 접속 해제했습니다.");
                 break;
+            case CMSessionEvent.CHANGE_SESSION:
+                System.out.println("[" + se.getUserName() + "] " + se.getSessionName() + " 세선에 접속했습니다.");
+                break;
+//            case CMSessionEvent. // 세션에서 떠났을 때 통보
             default:
                 return;
         }
