@@ -1,7 +1,9 @@
-import kr.ac.konkuk.ccslab.cm.*;
+// import kr.ac.konkuk.ccslab.cm.*;
 import kr.ac.konkuk.ccslab.cm.event.*;
 import kr.ac.konkuk.ccslab.cm.event.handler.CMAppEventHandler;
+import kr.ac.konkuk.ccslab.cm.info.CMConfigurationInfo;
 import kr.ac.konkuk.ccslab.cm.info.CMInfo;
+import kr.ac.konkuk.ccslab.cm.manager.CMDBManager;
 import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 
 public class CMServerEventHandler implements CMAppEventHandler {
@@ -23,10 +25,24 @@ public class CMServerEventHandler implements CMAppEventHandler {
     }
 
     private void processSessionEvent(CMEvent cme) {
+        CMConfigurationInfo confInfo = m_serverStub.getCMInfo().getConfigurationInfo();
         CMSessionEvent se = (CMSessionEvent) cme;
         switch(se.getID()) {
             case CMSessionEvent.LOGIN:
-                System.out.println("[" + se.getUserName() + "] requests login.");
+                System.out.println("[" + se.getUserName() + "] 로그인을 요청했습니다.");
+
+                // 로그인 정보 확인
+//                if(confInfo.isLoginScheme()) {
+//                    boolean ret = CMDBManager.authenticateUser(se.getUserName(), se.getPassword(), m_serverStub.getCMInfo());
+//                    if(!ret) {
+//                        System.out.println("[" + se.getUserName() + "] 인증 실패");
+//                        m_serverStub.replyEvent(se, 0);
+//                    } else {
+//                        System.out.println("[" + se.getUserName() + "] 인증 성공");
+//                        m_serverStub.replyEvent(se, 1);
+//                    }
+//                }
+
                 break;
             default:
                 return;

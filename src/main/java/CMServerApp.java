@@ -1,5 +1,7 @@
 import kr.ac.konkuk.ccslab.cm.stub.CMServerStub; // ??? 위에 포함되는 것이 아닌지 확인 필요
 
+import java.util.Scanner;
+
 public class CMServerApp {
     private CMServerStub m_serverStub;  // CMServerStub 타입 레퍼런스 변수 m_serverStub 선언
     private CMServerEventHandler m_eventHandler;  // CMServerEventHandler 타입 레퍼런스 변수 m_eventHandler 선언
@@ -20,9 +22,22 @@ public class CMServerApp {
     }
 
     public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
         CMServerApp server = new CMServerApp();  // CMServerApp 객체 생성
         CMServerStub cmStub = server.getServerStub();  // CMServerApp 객체의 getServerStub 메소드 실행, m_serverStub(CMServerStub 객체) 반환
         cmStub.setAppEventHandler(server.getServerEventHandler());  // ??? CM Stub에 Event Handler 설정
-        cmStub.startCM();  // CM이 CM Server Configuration 파일로 초기화 후 실행
+
+        boolean ret = cmStub.startCM();
+
+        if(ret) {
+            System.out.println("CM 초기화 완료.");
+        } else {
+            System.out.println("CM 초기화 오류.");
+        }
+
+        System.out.println("CM과 서버에 접속을 종료하려면 입력하세요.");
+        scanner.nextLine();
+        cmStub.terminateCM();
     }
 }

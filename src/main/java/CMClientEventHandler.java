@@ -25,13 +25,13 @@ public class CMClientEventHandler implements CMAppEventHandler {  // ??? CMAppEv
         switch (se.getID()) {
             case CMSessionEvent.LOGIN_ACK:
                 if(se.isValidUser() == 0) {
-                    System.err.println("This client fails authentication by the default server!");
+                    System.err.println("서버에 의해 인증이 실패되었습니다.");
                 }
                 else if (se.isValidUser() == -1) {
-                    System.err.println("This client is already in the login-user list!");
+                    System.err.println("이미 로그인되어 있습니다.");
                 }
                 else {
-                    System.out.println("This client successfully logs in to the default server.");
+                    System.out.println("서버에 성공적으로 로그인했습니다.");
                 }
                 break;
             default:
