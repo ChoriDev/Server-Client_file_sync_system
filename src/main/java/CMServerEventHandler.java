@@ -44,6 +44,15 @@ public class CMServerEventHandler implements CMAppEventHandler {
 //                }
 
                 break;
+            case CMSessionEvent.LOGOUT:
+                System.out.println("[" + se.getUserName() + "] 접속 해제했습니다.");
+                break;
+            case CMSessionEvent.JOIN_SESSION:
+                System.out.println("[" + se.getUserName() + "] " + se.getSessionName() + " 세션에 입장했습니다.");
+                break;
+            case CMSessionEvent.LEAVE_SESSION:
+                System.out.println("[" + se.getUserName() + "] " + se.getSessionName() + " 세션에 퇴장했습니다.");
+                break;
             default:
                 return;
         }

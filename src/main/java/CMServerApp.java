@@ -1,5 +1,4 @@
-import kr.ac.konkuk.ccslab.cm.stub.CMServerStub; // ??? 위에 포함되는 것이 아닌지 확인 필요
-
+import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 import java.util.Scanner;
 
 public class CMServerApp {
@@ -7,8 +6,8 @@ public class CMServerApp {
     private CMServerEventHandler m_eventHandler;  // CMServerEventHandler 타입 레퍼런스 변수 m_eventHandler 선언
 
     public CMServerApp() {  // CMServerApp 생성자
-        m_serverStub = new CMServerStub();  // CMServerStub 객체 생성
-        m_eventHandler = new CMServerEventHandler(m_serverStub);  // CMServerEventHandler 객체 생성
+        m_serverStub = new CMServerStub();  // CMServerStub 객체 생성 후 변수 m_serverStub에 할당
+        m_eventHandler = new CMServerEventHandler(m_serverStub);  // CMServerEventHandler 객체 생성 후 변수 m_eventHandler에 할당
     }
 
     // CMServerStub 타입 m_serverStub을 반환하는 메소드
