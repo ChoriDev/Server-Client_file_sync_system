@@ -1,3 +1,4 @@
+import kr.ac.konkuk.ccslab.cm.info.CMInfo;
 import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 
 import java.io.BufferedReader;
@@ -94,12 +95,12 @@ public class CMServerApp {
 //                case 20: // set file path
 //                    setFilePath();
 //                    break;
-//                case 21: // request a file
-//                    requestFile();
-//                    break;
-//                case 22: // push a file
-//                    pushFile();
-//                    break;
+                case 21: // request a file
+                    requestFile();
+                    break;
+                case 22: // push a file
+                    pushFile();
+                    break;
 //                case 23:	// test cancel receiving a file
 //                    cancelRecvFile();
 //                    break;
@@ -199,8 +200,8 @@ public class CMServerApp {
 //        System.out.print("5: show current channels, 6: show login users\n");
 //        System.out.print("7: show all configurations, 8: change configuration\n");
 //        System.out.print("9: show current thread information\n");
-//        System.out.print("---------------------------------- File Transfer\n");
-//        System.out.print("20: set file path, 21: request file, 22: push file\n");
+        System.out.print("---------------------------------- 파일 전송\n");
+        System.out.print(/*"20: set file path, */"21: 파일 요청, 22: 파일 전송\n");
 //        System.out.print("23: cancel receiving file, 24: cancel sending file\n");
 //        System.out.print("25: print sending/receiving file info\n");
 //        System.out.print("---------------------------------- Multi-server\n");
@@ -219,6 +220,75 @@ public class CMServerApp {
 //        System.out.print("103: start SNS user access simulation and measure prefetch accuracy\n");
 //        System.out.print("104: start and write recent SNS access history simulation to CM DB\n");
 //        System.out.print("105: send event with wrong bytes, 106: send event with wrong type\n");
+    }
+
+    public void requestFile()
+    {
+        boolean bReturn = false;
+        String strFileName = null;
+        String strFileOwner = null;
+        String strFileAppend = null;
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("====== 파일 요청");
+        try {
+            System.out.print("파일 이름: ");
+            strFileName = br.readLine();
+            System.out.print("파일 소유자(유저 이름): ");
+            strFileOwner = br.readLine();
+            System.out.print("파일 추가 모드('y'(덧붙이기);'n'(덮어쓰기);''(공백은 기본값): ");
+            strFileAppend = br.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if(strFileAppend.isEmpty())
+            bReturn = m_serverStub.requestFile(strFileName, strFileOwner);
+        else if(strFileAppend.equals("y"))
+            bReturn = m_serverStub.requestFile(strFileName,  strFileOwner, CMInfo.FILE_APPEND);
+        else if(strFileAppend.equals("n"))
+            bReturn = m_serverStub.requestFile(strFileName,  strFileOwner, CMInfo.FILE_OVERWRITE);
+        else
+            System.err.println("잘못된 파일 추가 모드입니다");
+
+        if(!bReturn)
+            System.err.println("파일 요청 오류! 파일("+strFileName+"), 소유자("+strFileOwner+").");
+
+        System.out.println("======");
+    }
+
+    public void pushFile()
+    {
+        boolean bReturn = false;
+        String strFilePath = null;
+        String strReceiver = null;
+        String strFileAppend = null;
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("====== 파일 전송");
+
+        try {
+            System.out.print("파일 경로: ");
+            strFilePath = br.readLine();
+            System.out.print("파일 수신자 (유저 이름): ");
+            strReceiver = br.readLine();
+            System.out.print("파일 추가 모드('y'(덧붙이기);'n'(덮어쓰기);''(공백은 기본값): ");
+            strFileAppend = br.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if(strFileAppend.isEmpty())
+            bReturn = m_serverStub.pushFile(strFilePath, strReceiver);
+        else if(strFileAppend.equals("y"))
+            bReturn = m_serverStub.pushFile(strFilePath,  strReceiver, CMInfo.FILE_APPEND);
+        else if(strFileAppend.equals("n"))
+            bReturn = m_serverStub.pushFile(strFilePath,  strReceiver, CMInfo.FILE_OVERWRITE);
+        else
+            System.err.println("잘못된 파일 추가 모드입니다");
+
+        if(!bReturn)
+            System.err.println("파일 전송 오류! 파일("+strFilePath+"), 수신자("+strReceiver+")");
+
+        System.out.println("======");
     }
 
     public void terminateCM()

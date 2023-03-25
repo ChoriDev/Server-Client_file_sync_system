@@ -1,4 +1,8 @@
+import kr.ac.konkuk.ccslab.cm.entity.CMUser;
+import kr.ac.konkuk.ccslab.cm.event.CMDummyEvent;
 import kr.ac.konkuk.ccslab.cm.event.CMSessionEvent;
+import kr.ac.konkuk.ccslab.cm.info.CMInfo;
+import kr.ac.konkuk.ccslab.cm.info.CMInteractionInfo;
 import kr.ac.konkuk.ccslab.cm.manager.CMCommManager;
 import kr.ac.konkuk.ccslab.cm.stub.CMClientStub;
 
@@ -137,9 +141,9 @@ public class CMClientApp {
                 case 10: // 기본 서버에 비동기식으로 로그인
                     testLoginDS();
                     break;
-                case 11: // 기본 서버에 동기식으로 로그인
-                    testSyncLoginDS();
-                    break;
+//                case 11: // 기본 서버에 동기식으로 로그인
+//                    testSyncLoginDS();
+//                    break;
                 case 12: // 기본 서버에 로그아웃
                     testLogoutDS();
                     break;
@@ -185,9 +189,9 @@ public class CMClientApp {
 //                case 41: // test multicast chat in current group
 //                    testMulticastChat();
 //                    break;
-//                case 42: // test CMDummyEvent
-//                    testDummyEvent();
-//                    break;
+                case 42: // CMDummyEvent 테스트
+                    testDummyEvent();
+                    break;
 //                case 43: // test CMUserEvent
 //                    testUserEvent();
 //                    break;
@@ -251,12 +255,12 @@ public class CMClientApp {
 //                case 70: // set file path
 //                    testSetFilePath();
 //                    break;
-//                case 71: // request a file
-//                    testRequestFile();
-//                    break;
-//                case 72: // push a file
-//                    testPushFile();
-//                    break;
+                case 71: // 파일 요청
+                    testRequestFile();
+                    break;
+                case 72: // 파일 전송
+                    testPushFile();
+                    break;
 //                case 73:    // test cancel receiving a file
 //                    cancelRecvFile();
 //                    break;
@@ -407,7 +411,7 @@ public class CMClientApp {
         System.out.println("1: 기본 서버에 접속, 2: 기본 서버에 접속 해제");
 //        System.out.println("3: connect to designated server, 4: disconnect from designated server");
         System.out.println("---------------------------------- 로그인");
-        System.out.println("10: 기본 서버에 비동기식으로 로그인, 11: 기본 서버에 동기식으로 로그인");
+        System.out.println("10: 기본 서버에 비동기식으로 로그인" /*, 11: 기본 서버에 동기식으로 로그인"*/);
         System.out.println("12: 기본 서버에 로그아웃");
 //        System.out.println("13: login to designated server, 14: logout from designated server");
 //        System.out.println("---------------------------------- Session/Group");
@@ -418,9 +422,9 @@ public class CMClientApp {
 //        System.out.println("26: print group members");
 //        System.out.println("27: request session information from designated server");
 //        System.out.println("28: join session of designated server, 29: leave session of designated server");
-//        System.out.println("---------------------------------- Event Transmission");
+        System.out.println("---------------------------------- Event 전송");
 //        System.out.println("40: chat, 41: multicast chat in current group");
-//        System.out.println("42: test CMDummyEvent, 43: test CMUserEvent, 44: test datagram event, 45: test user position");
+        System.out.println("42: CMDummyEvent 테스트" /*, 43: test CMUserEvent, 44: test datagram event, 45: test user position"*/);
 //        System.out.println("46: test sendrecv, 47: test castrecv");
 //        System.out.println("48: test asynchronous sendrecv, 49: test asynchronous castrecv");
 //        System.out.println("---------------------------------- Information");
@@ -432,8 +436,8 @@ public class CMClientApp {
 //        System.out.println("59: show current thread information");
 //        System.out.println("---------------------------------- Channel");
 //        System.out.println("60: add channel, 61: remove channel, 62: test blocking channel");
-//        System.out.println("---------------------------------- File Transfer");
-//        System.out.println("70: set file path, 71: request file, 72: push file");
+        System.out.println("---------------------------------- 파일 전송");
+        System.out.println(/*"70: set file path,*/ "71: 파일 요청, 72: 파일 전송");
 //        System.out.println("73: cancel receiving file, 74: cancel sending file");
 //        System.out.println("75: print sending/receiving file info");
 //        System.out.println("---------------------------------- Social Network Service");
@@ -510,57 +514,58 @@ public class CMClientApp {
         System.out.println("======");
     }
 
-    public void testSyncLoginDS()
-    {
-        String strUserName = null;
-        String strPassword = null;
-        CMSessionEvent loginAckEvent = null;
-        Console console = System.console();
-        if(console == null)
-        {
-            System.err.println("콘솔을 가져올 수 없습니다.");
-        }
-
-        System.out.println("====== 기본 서버에 로그인");
-        System.out.print("유저 ID: ");
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        try {
-            strUserName = br.readLine();
-            if(console == null)
-            {
-                System.out.print("패스워드: ");
-                strPassword = br.readLine();
-            }
-            else
-                strPassword = new String(console.readPassword("패스워드: "));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        loginAckEvent = m_clientStub.syncLoginCM(strUserName, strPassword);
-        if(loginAckEvent != null)
-        {
-            // 로그인 결과 출력
-            if(loginAckEvent.isValidUser() == 0)
-            {
-                System.err.println("서버에 의해 인증이 실패했습니다.");
-            }
-            else if(loginAckEvent.isValidUser() == -1)
-            {
-                System.err.println("이미 로그인되어 있습니다.");
-            }
-            else
-            {
-                System.out.println("서버에 성공적으로 로그인했습니다.");
-            }
-        }
-        else
-        {
-            System.err.println("로그인 요청에 실패했습니다.");
-        }
-
-        System.out.println("======");
-    }
+    // 동기식으로 로그인
+//    public void testSyncLoginDS()
+//    {
+//        String strUserName = null;
+//        String strPassword = null;
+//        CMSessionEvent loginAckEvent = null;
+//        Console console = System.console();
+//        if(console == null)
+//        {
+//            System.err.println("콘솔을 가져올 수 없습니다.");
+//        }
+//
+//        System.out.println("====== 기본 서버에 로그인");
+//        System.out.print("유저 ID: ");
+//        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+//        try {
+//            strUserName = br.readLine();
+//            if(console == null)
+//            {
+//                System.out.print("패스워드: ");
+//                strPassword = br.readLine();
+//            }
+//            else
+//                strPassword = new String(console.readPassword("패스워드: "));
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//
+//        loginAckEvent = m_clientStub.syncLoginCM(strUserName, strPassword);
+//        if(loginAckEvent != null)
+//        {
+//            // 로그인 결과 출력
+//            if(loginAckEvent.isValidUser() == 0)
+//            {
+//                System.err.println("서버에 의해 인증이 실패했습니다.");
+//            }
+//            else if(loginAckEvent.isValidUser() == -1)
+//            {
+//                System.err.println("이미 로그인되어 있습니다.");
+//            }
+//            else
+//            {
+//                System.out.println("서버에 성공적으로 로그인했습니다.");
+//            }
+//        }
+//        else
+//        {
+//            System.err.println("로그인 요청에 실패했습니다.");
+//        }
+//
+//        System.out.println("======");
+//    }
 
     public void testLogoutDS()
     {
@@ -571,6 +576,120 @@ public class CMClientApp {
             System.out.println("로그아웃 요청 성공");
         else
             System.err.println("로그아웃 요청 실패");
+        System.out.println("======");
+    }
+
+    public void testDummyEvent()
+    {
+        CMInteractionInfo interInfo = m_clientStub.getCMInfo().getInteractionInfo();
+        CMUser myself = interInfo.getMyself();
+
+        if(myself.getState() != CMInfo.CM_SESSION_JOIN)
+        {
+            System.out.println("세선과 그룹에 속해있어야 합니다.");
+            return;
+        }
+
+        System.out.println("====== 현재 그룹에서 CMDummyEvent 테스트");
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        System.out.print("수신자를 입력하세요: ");
+        String strTarget = null;
+        try {
+            strTarget = br.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        System.out.print("메시지를 입력하세요: ");
+        String strInput = null;
+        try {
+            strInput = br.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        CMDummyEvent due = new CMDummyEvent();
+        due.setHandlerSession(myself.getCurrentSession());
+        due.setHandlerGroup(myself.getCurrentGroup());
+        due.setDummyInfo(strInput);
+        m_clientStub.send(due, strTarget);
+        due = null;
+
+        System.out.println("======");
+    }
+
+    public void testRequestFile()
+    {
+        boolean bReturn = false;
+        String strFileName = null;
+        String strFileOwner = null;
+        String strFileAppend = null;
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("====== 파일 요청");
+        try {
+            System.out.print("파일 이름: ");
+            strFileName = br.readLine();
+            System.out.print("파일 소유자(서버면 enter 입력): ");
+            strFileOwner = br.readLine();
+            if(strFileOwner.isEmpty())
+                strFileOwner = m_clientStub.getDefaultServerName();
+            System.out.print("파일 추가 모드('y'(덧붙이기);'n'(덮어쓰기);''(공백은 기본값): ");
+            strFileAppend = br.readLine();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if(strFileAppend.isEmpty())
+            bReturn = m_clientStub.requestFile(strFileName, strFileOwner);
+        else if(strFileAppend.equals("y"))
+            bReturn = m_clientStub.requestFile(strFileName,  strFileOwner, CMInfo.FILE_APPEND);
+        else if(strFileAppend.equals("n"))
+            bReturn = m_clientStub.requestFile(strFileName,  strFileOwner, CMInfo.FILE_OVERWRITE);
+        else
+            System.err.println("잘못된 파일 추가 모드입니다.");
+
+        if(!bReturn)
+            System.err.println("파일 요청 오류! 파일("+strFileName+"), 소유자("+strFileOwner+").");
+
+        System.out.println("======");
+    }
+
+    public void testPushFile()
+    {
+        String strFilePath = null;
+        String strReceiver = null;
+        String strFileAppend = null;
+        boolean bReturn = false;
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("====== 파일 전송");
+
+        try {
+            System.out.print("파일 경로: ");
+            strFilePath = br.readLine();
+            System.out.print("파일 수신자 (서버면 enter 입력): ");
+            strReceiver = br.readLine();
+            if(strReceiver.isEmpty())
+                strReceiver = m_clientStub.getDefaultServerName();
+            System.out.print("파일 추가 모드('y'(덧붙이기);'n'(덮어쓰기);''(공백은 기본값): ");
+            strFileAppend = br.readLine();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if(strFileAppend.isEmpty())
+            bReturn = m_clientStub.pushFile(strFilePath, strReceiver);
+        else if(strFileAppend.equals("y"))
+            bReturn = m_clientStub.pushFile(strFilePath,  strReceiver, CMInfo.FILE_APPEND);
+        else if(strFileAppend.equals("n"))
+            bReturn = m_clientStub.pushFile(strFilePath,  strReceiver, CMInfo.FILE_OVERWRITE);
+        else
+            System.err.println("잘못된 파일 추가 모드입니다.");
+
+        if(!bReturn)
+            System.err.println("파일 전송 오류! 파일("+strFilePath+"), 수신자("+strReceiver+")");
+
         System.out.println("======");
     }
 
