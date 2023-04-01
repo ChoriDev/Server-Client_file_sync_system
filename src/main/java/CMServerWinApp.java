@@ -41,7 +41,7 @@ import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 
 public class CMServerWinApp extends JFrame {
     private CMServerStub m_serverStub;  // CMServerStub 타입 레퍼런스 변수 m_serverStub 선언
-    private CMServerEventHandler m_eventHandler;  // CMServerEventHandler 타입 레퍼런스 변수 m_eventHandler 선언
+    private CMServerWinEventHandler m_eventHandler;  // CMServerEventHandler 타입 레퍼런스 변수 m_eventHandler 선언
     private JTextPane m_outTextPane;
     private JTextField m_inTextField;
     private JButton m_startStopButton;
@@ -85,7 +85,7 @@ public class CMServerWinApp extends JFrame {
         setVisible(true);
 
         m_serverStub = new CMServerStub();  // CMServerStub 객체 생성 후 변수 m_serverStub에 할당
-        m_eventHandler = new CMServerEventHandler(m_serverStub);  // CMServerEventHandler 객체 생성 후 변수 m_eventHandler에 할당
+        m_eventHandler = new CMServerWinEventHandler(m_serverStub, this);  // CMServerEventHandler 객체 생성 후 변수 m_eventHandler에 할당
 
         startCM();
     }
@@ -322,7 +322,7 @@ public class CMServerWinApp extends JFrame {
     }
 
     // CMServerEventHandler 타입 m_eventHandler를 반환하는 메소드
-    public CMServerEventHandler getServerEventHandler() {
+    public CMServerWinEventHandler getServerEventHandler() {
         return m_eventHandler;
     }
 

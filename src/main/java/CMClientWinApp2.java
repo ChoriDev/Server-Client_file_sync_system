@@ -44,9 +44,9 @@ import kr.ac.konkuk.ccslab.cm.info.enums.CMTestFileModType;
 import kr.ac.konkuk.ccslab.cm.manager.*;
 import kr.ac.konkuk.ccslab.cm.stub.CMClientStub;
 
-public class CMClientWinApp2 extends JFrame{
+public class CMClientWinApp2 extends CMClientWinApp{
     private CMClientStub m_clientStub;  // CMClientStub 타입 레퍼런스 변수 m_clientStub 선언
-    private CMClientEventHandler m_eventHandler;  // CMClientEventHandler 타입 레퍼런스 변수 m_eventHandler 선언
+    private CMClientWinEventHandler m_eventHandler;  // CMClientEventHandler 타입 레퍼런스 변수 m_eventHandler 선언
     private boolean m_bRun;
     private JTextPane m_outTextPane;
     private JTextField m_inTextField;
@@ -100,7 +100,7 @@ public class CMClientWinApp2 extends JFrame{
         setVisible(true);
 
         m_clientStub = new CMClientStub();  // CMClientStub 객체 생성
-        m_eventHandler = new CMClientEventHandler(m_clientStub);  // CMClientEventHandler 객체 생성, CMClientStub 객체를 인자로 넘김
+        m_eventHandler = new CMClientWinEventHandler(m_clientStub, this);  // CMClientWinEventHandler 객체 생성, CMClientStub 객체를 인자로 넘김
 
         testStartCM();
 
@@ -217,7 +217,7 @@ public class CMClientWinApp2 extends JFrame{
         return m_clientStub;
     }
 
-    public CMClientEventHandler getClientEventHandler() {  // CMClientEventHandler 타입 레퍼런스 변수 m_eventHandler를 반환하는 메소드
+    public CMClientWinEventHandler getClientEventHandler() {  // CMClientWinEventHandler 타입 레퍼런스 변수 m_eventHandler를 반환하는 메소드
         return m_eventHandler;
     }
 
@@ -995,7 +995,7 @@ public class CMClientWinApp2 extends JFrame{
         int option = JOptionPane.showConfirmDialog(null, message, "파일 전송", JOptionPane.OK_CANCEL_OPTION);
         if(option == JOptionPane.CANCEL_OPTION || option != JOptionPane.OK_OPTION)
         {
-            printMessage("취소되었습니다.\n");
+            printMessage("취소했습니다.\n");
             return;
         }
 
