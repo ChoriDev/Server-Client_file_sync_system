@@ -165,7 +165,7 @@ public class CMClientEventHandler implements CMAppEventHandler {  // ??? CMAppEv
         switch(fe.getID())
         {
             case CMFileEvent.REQUEST_PERMIT_PULL_FILE:
-                String strReq = "["+fe.getFileReceiver()+"] ("+fe.getFileName()+
+                String strReq = "["+fe.getFileReceiver()+"] 수신자가 ("+fe.getFileName()+
                         ") 파일을 요청했습니다.\n";
                 System.out.print(strReq);
                 // !!!아래가 무엇인지 확인하기
@@ -187,12 +187,12 @@ public class CMClientEventHandler implements CMAppEventHandler {  // ??? CMAppEv
                 }
                 else if(fe.getReturnCode() == 0)
                 {
-                    System.err.print("["+fe.getFileSender()+"] (" + fe.getFileName() + ") 파일 전송을 거부했습니다.\n");
+                    System.err.print("["+fe.getFileSender()+"] 송신자가 (" + fe.getFileName() + ") 파일 전송을 거부했습니다.\n");
                 }
                 break;
             case CMFileEvent.REQUEST_PERMIT_PUSH_FILE:
                 StringBuffer strReqBuf = new StringBuffer();
-                strReqBuf.append("["+fe.getFileSender()+"] 파일을 보내려 합니다.\n");
+                strReqBuf.append("["+fe.getFileSender()+"] 송신자가 파일을 보내려 합니다.\n");
                 strReqBuf.append("파일 경로: "+fe.getFilePath()+"\n");
                 strReqBuf.append("파일 크기: "+fe.getFileSize()+"\n");
                 System.out.print(strReqBuf.toString());
@@ -210,17 +210,17 @@ public class CMClientEventHandler implements CMAppEventHandler {  // ??? CMAppEv
             case CMFileEvent.REPLY_PERMIT_PUSH_FILE:
                 if(fe.getReturnCode() == 0)
                 {
-                    System.err.print("["+fe.getFileReceiver()+"] 파일 수신을 거부했습니다.\n");
+                    System.err.print("["+fe.getFileReceiver()+"] 수신자가 파일 수신을 거부했습니다.\n");
                     System.err.print("파일 경로("+fe.getFilePath()+"), 파일 크기("+fe.getFileSize()+").\n");
                 }
                 break;
             case CMFileEvent.START_FILE_TRANSFER:
             case CMFileEvent.START_FILE_TRANSFER_CHAN:
-                System.out.println("["+fe.getFileSender()+"] 파일을 보냅니다. ("+fe.getFileName()+").");
+                System.out.println("["+fe.getFileSender()+"] 송신자가 파일을 보냅니다. ("+fe.getFileName()+").");
                 break;
             case CMFileEvent.END_FILE_TRANSFER:
             case CMFileEvent.END_FILE_TRANSFER_CHAN:
-                System.out.println("["+fe.getFileSender()+"] 파일 전송을 완료했습니다. ("+fe.getFileName()+", "
+                System.out.println("["+fe.getFileSender()+"] 송신자가 파일 전송을 완료했습니다. ("+fe.getFileName()+", "
                         +fe.getFileSize()+" Bytes).");
                 if(m_bDistFileProc)
                     processFile(fe.getFileName());
