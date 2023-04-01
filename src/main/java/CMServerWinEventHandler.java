@@ -134,6 +134,9 @@ public class CMServerWinEventHandler implements CMAppEventHandler {
                 printMessage("["+fe.getFileSender()+"] 송신자가 파일 전송을 완료했습니다. ("+fe.getFileName()+", "
                         +fe.getFileSize()+" Bytes).\n");
                 String strFile = fe.getFileName();
+
+                m_server.sendCMDummyEvent("수신자가 파일 수신을 완료했습니다.", fe.getFileSender());
+
                 if(m_bDistFileProc)
                 {
                     processFile(fe.getFileSender(), strFile);

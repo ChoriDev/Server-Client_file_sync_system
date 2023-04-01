@@ -817,7 +817,7 @@ public class CMClientWinApp3 extends CMClientWinApp{
         setTitle("CMClientWinApp");
     }
 
-    private void testDummyEvent()
+    public void testDummyEvent()
     {
 
         String strMessage = null;

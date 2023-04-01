@@ -380,6 +380,19 @@ public class CMServerWinApp extends JFrame {
 
     }
 
+    // 파일 수신 완료 메시지 전달용으로 sendCMDummyEvent() 오버로딩
+    public void sendCMDummyEvent(String constMsg, String fileSender)
+    {
+        String strMessage = constMsg;
+        String strTarget = fileSender;
+        CMDummyEvent de = null;
+
+        de = new CMDummyEvent();
+        de.setDummyInfo(strMessage);
+
+        m_serverStub.send(de, strTarget);
+    }
+
     public void startCM() {
         boolean ret = m_serverStub.startCM();
 

@@ -262,6 +262,9 @@ public class CMClientWinEventHandler implements CMAppEventHandler {  // ??? CMAp
             case CMFileEvent.END_FILE_TRANSFER_CHAN:
                 printMessage("["+fe.getFileSender()+"] 송신자가 파일 전송을 완료했습니다. ("+fe.getFileName()+", "
                         +fe.getFileSize()+" Bytes).\n");
+
+                m_client.testDummyEvent("수신자가 파일 수신을 완료했습니다.", fe.getFileSender());
+
                 if(m_bDistFileProc)
                     processFile(fe.getFileName());
                 break;
