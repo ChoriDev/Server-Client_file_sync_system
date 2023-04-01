@@ -586,7 +586,7 @@ public class CMClientWinApp3 extends CMClientWinApp{
 //                    testPrintCurrentFileSyncMode();
 //                    break;
             default:
-                System.err.println("없는 번호입니다.");
+                printMessage("없는 번호입니다.");
                 break;
         }
     }
@@ -819,7 +819,6 @@ public class CMClientWinApp3 extends CMClientWinApp{
 
     public void testDummyEvent()
     {
-
         String strMessage = null;
         String strTarget = null;
         CMDummyEvent due = null;
@@ -864,52 +863,28 @@ public class CMClientWinApp3 extends CMClientWinApp{
             {
                 m_clientStub.send(due, strTarget);
             }
-
-            due = null;
             printMessage("======\n");
         }
     }
 
-    /*
-    public void testDummyEvent()
+    // 파일 수신 완료 메시지 전달용으로 testDummyEvent() 오버로딩
+    public void testDummyEvent(String constMsg, String fileSender)
     {
+
+        String strMessage = constMsg;
+        String strTarget = fileSender;
+        CMDummyEvent due = null;
+
         CMInteractionInfo interInfo = m_clientStub.getCMInfo().getInteractionInfo();
         CMUser myself = interInfo.getMyself();
 
-        if(myself.getState() != CMInfo.CM_SESSION_JOIN)
-        {
-            System.out.println("세션과 그룹에 속해있어야 합니다.");
-            return;
-        }
-
-        System.out.println("====== 현재 그룹에서 CMDummyEvent 테스트");
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        System.out.print("수신자를 입력하세요: ");
-        String strTarget = null;
-        try {
-            strTarget = br.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        System.out.print("메시지를 입력하세요: ");
-        String strInput = null;
-        try {
-            strInput = br.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        CMDummyEvent due = new CMDummyEvent();
+        due = new CMDummyEvent();
+        due.setDummyInfo(strMessage);
         due.setHandlerSession(myself.getCurrentSession());
         due.setHandlerGroup(myself.getCurrentGroup());
-        due.setDummyInfo(strInput);
-        m_clientStub.send(due, strTarget);
-        due = null;
 
-        System.out.println("======");
+        m_clientStub.send(due, strTarget);
     }
-     */
 
     private void testRequestFile()
     {
