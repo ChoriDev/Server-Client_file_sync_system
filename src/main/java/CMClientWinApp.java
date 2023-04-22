@@ -1,327 +1,263 @@
-import java.nio.file.Files;
-import java.util.*;
-import java.util.List;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.SelectableChannel;
-import java.nio.channels.SocketChannel;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
 import javax.swing.*;
 import javax.swing.text.*;
-
-import kr.ac.konkuk.ccslab.cm.entity.CMGroup;
-import kr.ac.konkuk.ccslab.cm.entity.CMGroupInfo;
-import kr.ac.konkuk.ccslab.cm.entity.CMList;
 import kr.ac.konkuk.ccslab.cm.entity.CMMember;
-import kr.ac.konkuk.ccslab.cm.entity.CMMessage;
-import kr.ac.konkuk.ccslab.cm.entity.CMPosition;
-import kr.ac.konkuk.ccslab.cm.entity.CMRecvFileInfo;
-import kr.ac.konkuk.ccslab.cm.entity.CMSendFileInfo;
-import kr.ac.konkuk.ccslab.cm.entity.CMServer;
-import kr.ac.konkuk.ccslab.cm.entity.CMSession;
-import kr.ac.konkuk.ccslab.cm.entity.CMSessionInfo;
 import kr.ac.konkuk.ccslab.cm.entity.CMUser;
-import kr.ac.konkuk.ccslab.cm.event.CMBlockingEventQueue;
 import kr.ac.konkuk.ccslab.cm.event.CMDummyEvent;
-import kr.ac.konkuk.ccslab.cm.event.CMEvent;
-import kr.ac.konkuk.ccslab.cm.event.CMFileEvent;
-import kr.ac.konkuk.ccslab.cm.event.CMInterestEvent;
 import kr.ac.konkuk.ccslab.cm.event.CMSessionEvent;
-import kr.ac.konkuk.ccslab.cm.event.CMUserEvent;
 import kr.ac.konkuk.ccslab.cm.info.*;
-import kr.ac.konkuk.ccslab.cm.info.enums.CMFileSyncMode;
-import kr.ac.konkuk.ccslab.cm.info.enums.CMTestFileModType;
-import kr.ac.konkuk.ccslab.cm.manager.*;
 import kr.ac.konkuk.ccslab.cm.stub.CMClientStub;
 
 public class CMClientWinApp extends JFrame{
     private CMClientStub m_clientStub;  // CMClientStub 타입 레퍼런스 변수 m_clientStub 선언
     private CMClientWinEventHandler m_eventHandler;  // CMClientEventHandler 타입 레퍼런스 변수 m_eventHandler 선언
-    private boolean m_bRun;
-    private JTextPane m_outTextPane;
-    private JTextField m_inTextField;
-    private JButton m_startStopButton;
-    private JButton m_loginLogoutButton;
-    private CMWinClient.MyMouseListener cmMouseListener;
+    private JPanel m_pnlCenter;  // Gui에 사용할 변수, 출력 메시지 패널과 접속 중인 다른 사용자 표시 패널을 담음
+    private JTextPane m_outTextPane;  // Gui에 사용할 변수, 메시지를 출력할 패널
+    private JTextPane m_memberPane;  // Gui에 사용할 변수, 현재 접속 중인 사용자를 출력할 패널
+    private JTextField m_inTextField;  // Gui에 사용할 변수, 입력을 할 수 있는 텍스트 상자
+    private JButton m_startStopButton;  // Gui에 사용할 변수, 클라이언트 시작과 종료를 할 수 있는 버튼
+    private JButton m_loginLogoutButton;  // Gui에 사용할 변수, 로그인과 로그아웃을 할 수 있는 버튼
 
     public CMClientWinApp() {  // CMClientApp 생성자
-        MyKeyListener cmKeyListener = new MyKeyListener();
-        MyActionListener cmActionListener = new MyActionListener();
-//        cmMouseListener = new MyMouseListener();
-        setTitle("CMClientWinApp");
-        setSize(600, 600);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        // GUI 관련 설정
+        MyKeyListener cmKeyListener = new MyKeyListener();  // 키 이벤트 리스너 객체 생성
+        MyActionListener cmActionListener = new MyActionListener();  // 액션 이벤트 리스너 객체 생성
+        setTitle("CMClientWinApp");  // 프레임의 타이틀 설정
+        setSize(500, 500);  // 프레임 크기 설정
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);  // 닫기 버튼을 클릭하면 프로그램 종료 설정
+        setLayout(new BorderLayout());  // 프레임의 배치를 BorderLayout으로 설정
 
-        setLayout(new BorderLayout());
+        m_pnlCenter = new JPanel(new GridLayout());  // 배치를 GridLayout으로 설정
+        getContentPane().add(m_pnlCenter, BorderLayout.CENTER);  // 프레임의 중앙에 배치
 
-        m_outTextPane = new JTextPane();
-        m_outTextPane.setBackground(new Color(245,245,245));
-        m_outTextPane.setEditable(false);
+        m_outTextPane = new JTextPane();  // 메시지를 출력할 텍스트 패널 생성
+        m_outTextPane.setBackground(new Color(236,235,227));  // 텍스트 패널의 바탕색 설정
+        m_outTextPane.setEditable(false);  // 텍스트 패널은 편집이 불가하도록 설정
+        JScrollPane centerScroll = new JScrollPane(m_outTextPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);  // 스크롤 패널 생성
+        m_pnlCenter.add(centerScroll);  // pnlCenter 패널에 배치
 
-        StyledDocument doc = m_outTextPane.getStyledDocument();
-        addStylesToDocument(doc);
-        add(m_outTextPane, BorderLayout.CENTER);
-        JScrollPane centerScroll = new JScrollPane (m_outTextPane,
-                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        //add(centerScroll);
-        getContentPane().add(centerScroll, BorderLayout.CENTER);
+        StyledDocument doc = m_outTextPane.getStyledDocument();  // 스타일 가져오기
+        addStylesToDocument(doc);  // 스타일 적용
 
-        m_inTextField = new JTextField();
-        m_inTextField.addKeyListener(cmKeyListener);
-        add(m_inTextField, BorderLayout.SOUTH);
+        m_memberPane = new JTextPane();  // 현재 접속 중인 사용자를 출력할 패널 생성
+        m_memberPane.setEditable(false);  // 패널 편집이 불가능하도록 설정
+        JScrollPane leftScroll = new JScrollPane(m_memberPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);  // 스크롤 패널 생성
+        m_pnlCenter.add(leftScroll);  // pnlCenter 패널에 배치
 
-        JPanel topButtonPanel = new JPanel();
-        topButtonPanel.setBackground(new Color(220,220,220));
-        topButtonPanel.setLayout(new FlowLayout());
-        add(topButtonPanel, BorderLayout.NORTH);
+        StyledDocument doc2 = m_outTextPane.getStyledDocument();  // 스타일 가져오기
+        addStylesToDocument(doc2);  // 스타일 적용
 
-        m_startStopButton = new JButton("클라이언트 시작");
-        //m_startStopButton.setBackground(Color.LIGHT_GRAY);	// not work on Mac
-        m_startStopButton.addActionListener(cmActionListener);
-        m_startStopButton.setEnabled(false);
-        //add(startStopButton, BorderLayout.NORTH);
-        topButtonPanel.add(m_startStopButton);
+        m_inTextField = new JTextField();  // 메시지를 입력할 텍스트 필드 생성
+        m_inTextField.addKeyListener(cmKeyListener);  // 텍스트 필드에 키 이벤트 리스너 부착
+        add(m_inTextField, BorderLayout.SOUTH);  // 텍스트 필드를 프레임의 하단에 배치
 
-        m_loginLogoutButton = new JButton("로그인");
-        m_loginLogoutButton.addActionListener(cmActionListener);
-        m_loginLogoutButton.setEnabled(false);
-        topButtonPanel.add(m_loginLogoutButton);
+        JPanel topButtonPanel = new JPanel();  // 버튼을 담을 패널 생성
+        topButtonPanel.setBackground(new Color(3,107,63));  // 패널의 배경색 설정
+        topButtonPanel.setLayout(new FlowLayout());  // 패널의 배치를 FlowLayout으로 설정
+        add(topButtonPanel, BorderLayout.NORTH);  // 패널을 프레임의 상단에 배치
 
-        setVisible(true);
+        m_startStopButton = new JButton("클라이언트 시작");  // 클라이언트 작동 버튼 생성
+        m_startStopButton.addActionListener(cmActionListener);  // 버튼에 액션 리스너 부착
+        m_startStopButton.setEnabled(true);  // 버튼 활성화
+        topButtonPanel.add(m_startStopButton);  // 버튼을 담을 패널에 버튼 추가
+
+        m_loginLogoutButton = new JButton("로그인");  // 로그인 버튼 생성
+        m_loginLogoutButton.addActionListener(cmActionListener);  // 버튼에 액션 리스너 부착
+        m_loginLogoutButton.setEnabled(true);  // 버튼 활성화
+        topButtonPanel.add(m_loginLogoutButton);  // 버튼을 담을 패널에 버튼 추가
+
+        setVisible(true);  // 프레임 출력
 
         m_clientStub = new CMClientStub();  // CMClientStub 객체 생성
-        m_eventHandler = new CMClientWinEventHandler(m_clientStub, this);  // CMClientWinEventHandler 객체 생성, CMClientStub 객체를 인자로 넘김
+        m_eventHandler = new CMClientWinEventHandler(m_clientStub, this);  // CMClientWinEventHandler 객체 생성
 
-        testStartCM();
+        testStartCM();  // 프로그램을 실행하면 자동으로 클라이언트 시작
 
-        m_inTextField.requestFocus();
+        m_inTextField.requestFocus(); // 텍스트 입력 상자에 포커스 설정
     }
 
-    public class MyKeyListener implements KeyListener {
-        public void keyPressed(KeyEvent e)
-        {
-            int key = e.getKeyCode();
-            if(key == KeyEvent.VK_ENTER)
-            {
-                JTextField input = (JTextField)e.getSource();
-                String strText = input.getText();
-                printMessage(strText+"\n");
-                // parse and call CM API
-                processInput(strText);
-                input.setText("");
-                input.requestFocus();
-            }
-            else if(key == KeyEvent.VK_ALT)
-            {
-
+    public class MyKeyListener implements KeyListener {  // 키 이벤트에 관한 리스너
+        public void keyPressed(KeyEvent e) {  // 키가 눌렸을 때의 작동
+            int key = e.getKeyCode();  // 어떤 키가 눌렸는지 정보 저장
+            if(key == KeyEvent.VK_ENTER) { // 눌린 키가 enter일 경우
+                JTextField input = (JTextField)e.getSource();  // 이벤트가 발생한 컴포넌트 정보 저장
+                String strText = input.getText();  // 텍스트 필드에 입력된 값 저장
+                printMessage(strText+"\n");  // 텍스트 필드의 값 출력
+                processInput(strText);  // 입력한 값에 따라 기능을 수행하는 메소드에 입력한 값 전달
+                input.setText("");  // 이벤트가 발생한 컴포넌트의 정보 초기화
+                input.requestFocus();  // 이벤트가 발생한 컴포넌트에 포커스 설정
             }
         }
 
-        public void keyReleased(KeyEvent e){}
-        public void keyTyped(KeyEvent e){}
-    }
-
-    public class MyActionListener implements ActionListener {
-        public void actionPerformed(ActionEvent e)
-        {
-            JButton button = (JButton) e.getSource();
-            if(button.getText().equals("클라이언트 시작"))
-            {
-                testStartCM();
-            }
-            else if(button.getText().equals("클라이언트 종료"))
-            {
-                testTerminateCM();
-            }
-            else if(button.getText().equals("로그인"))
-            {
-                // login to the default cm server
-                testSyncLoginDS();
-            }
-            else if(button.getText().equals("로그아웃"))
-            {
-                // logout from the default cm server
-                testLogoutDS();
-            }
-//            else if(button.equals(m_composeSNSContentButton))
-//            {
-//                testSNSContentUpload();
-//            }
-//            else if(button.equals(m_readNewSNSContentButton))
-//            {
-//                testDownloadNewSNSContent();
-//            }
-//            else if(button.equals(m_readNextSNSContentButton))
-//            {
-//                testDownloadNextSNSContent();
-//            }
-//            else if(button.equals(m_readPreviousSNSContentButton))
-//            {
-//                testDownloadPreviousSNSContent();
-//            }
-//            else if(button.equals(m_findUserButton))
-//            {
-//                testFindRegisteredUser();
-//            }
-//            else if(button.equals(m_addFriendButton))
-//            {
-//                testAddNewFriend();
-//            }
-//            else if(button.equals(m_removeFriendButton))
-//            {
-//                testRemoveFriend();
-//            }
-//            else if(button.equals(m_friendsButton))
-//            {
-//                testRequestFriendsList();
-//            }
-//            else if(button.equals(m_friendRequestersButton))
-//            {
-//                testRequestFriendRequestersList();
-//            }
-//            else if(button.equals(m_biFriendsButton))
-//            {
-//                testRequestBiFriendsList();
-//            }
-
-            m_inTextField.requestFocus();
+        public void keyReleased(KeyEvent e){
+            // 미사용
+        }
+        public void keyTyped(KeyEvent e){
+            // 미사용
         }
     }
 
-    private void addStylesToDocument(StyledDocument doc)
-    {
-        Style defStyle = StyleContext.getDefaultStyleContext().getStyle(StyleContext.DEFAULT_STYLE);
-
-        Style regularStyle = doc.addStyle("regular", defStyle);
-        StyleConstants.setFontFamily(regularStyle, "SansSerif");
-
-        Style boldStyle = doc.addStyle("bold", defStyle);
-        StyleConstants.setBold(boldStyle, true);
-
-        Style linkStyle = doc.addStyle("link", defStyle);
-        StyleConstants.setForeground(linkStyle, Color.BLUE);
-        StyleConstants.setUnderline(linkStyle, true);
+    public class MyActionListener implements ActionListener {  // 액션 이벤트에 관한 리스너
+        public void actionPerformed(ActionEvent e) { // 액션을 감지했을 때 작동
+            JButton button = (JButton)e.getSource();  // 클릭된 버튼의 정보 저장
+            if(button.getText().equals("클라이언트 시작")) {  // 클릭된 버튼이 "클라이언트 시작"일 경우
+                testStartCM();  // CM 시작
+            }
+            else if(button.getText().equals("클라이언트 종료")) {  // 클릭된 버튼이 "클라이언트 종료"일 경우
+                testTerminateCM();  // CM 종료
+            }
+            else if(button.getText().equals("로그인")) {  // 클릭된 버튼이 "로그인"일 경우
+                testSyncLoginDS();  // 서버에 동기식으로 로그인
+            }
+            else if(button.getText().equals("로그아웃")) {  // 클릭된 버튼이 "로그아웃"일 경우
+                testLogoutDS();  // 서버에서 로그아웃
+            }
+            m_inTextField.requestFocus();  // 텍스트 필드에 포커스 설정
+        }
     }
 
-    public CMClientStub getClientStub() {  // CMClientStub 타입 레퍼런스 변수 m_clientStub를 반환하는 메소드
+    private void addStylesToDocument(StyledDocument doc) {  // 스타일 설정 메소드
+        Style defStyle = StyleContext.getDefaultStyleContext().getStyle(StyleContext.DEFAULT_STYLE);  //  기본 스타일 가져오기
+
+        Style regularStyle = doc.addStyle("regular", defStyle);  // 일반 스타일
+        StyleConstants.setFontFamily(regularStyle, "SansSerif");  // 글꼴은 산세리프
+
+        Style boldStyle = doc.addStyle("bold", defStyle);  // 볼드 스타일
+        StyleConstants.setBold(boldStyle, true);  // 글씨 굵게
+
+        Style linkStyle = doc.addStyle("link", defStyle);  // 링크 스타일
+        StyleConstants.setForeground(linkStyle, Color.BLUE);  // 글씨색을 파란색으로
+        StyleConstants.setUnderline(linkStyle, true);  // 글씨에 밑줄
+    }
+
+    public CMClientStub getClientStub() {  // CMClientStub 타입 레퍼런스 변수 m_clientStub를 반환
         return m_clientStub;
     }
 
-    public CMClientWinEventHandler getClientEventHandler() {  // CMClientWinEventHandler 타입 레퍼런스 변수 m_eventHandler를 반환하는 메소드
+    public CMClientWinEventHandler getClientEventHandler() {  // CMClientWinEventHandler 타입 레퍼런스 변수 m_eventHandler를 반환
         return m_eventHandler;
     }
 
-    private void initializeButtons()
-    {
-        m_startStopButton.setText("클라이언트 시작");
-        m_loginLogoutButton.setText("로그인");
-        revalidate();
-        repaint();
+    private void initializeButtons() {  // 클라이언트 시작 시 버튼 초기화
+        m_startStopButton.setText("클라이언트 시작");  // 시작, 종료 버튼을 "클라이언트 시작"으로 설정
+        m_loginLogoutButton.setText("로그인");  // 로그인, 로그아웃 버튼을 "로그인"으로 설정
+        revalidate();  // 컴포넌트 재배치
+        repaint();  // 컴포넌트 다시 그리기
     }
 
-    public void setButtonsAccordingToClientState()
-    {
-        int nClientState;
-        nClientState = m_clientStub.getCMInfo().getInteractionInfo().getMyself().getState();
+    public void setButtonsAccordingToClientState() { // 클라이언트 상태에 따라 버튼 설정
+        int nClientState;  // 클라이언트 상태를 담는 변수
+        nClientState = m_clientStub.getCMInfo().getInteractionInfo().getMyself().getState();  // 클라이언트 정보 가져오기
 
-        // nclientState: CMInfo.CM_INIT, CMInfo.CM_CONNECT, CMInfo.CM_LOGIN, CMInfo.CM_SESSION_JOIN
-        switch(nClientState)
-        {
-            case CMInfo.CM_INIT:
-                m_startStopButton.setText("클라이언트 종료");
-                m_loginLogoutButton.setText("로그인");
-                //m_leftButtonPanel.setVisible(false);
-                //m_westScroll.setVisible(false);
+        // 클라이언트 상태가 CMInfo.CM_INIT, CMInfo.CM_CONNECT, CMInfo.CM_LOGIN, CMInfo.CM_SESSION_JOIN일 경우
+        switch(nClientState) {
+            case CMInfo.CM_INIT:  // CM_INIT인 경우(CM을 새로 시작할 경우)
+                m_startStopButton.setText("클라이언트 시작");  // 시작, 종료 버튼을 "클라이언트 시작"으로 설정
+                m_loginLogoutButton.setText("로그인");  // 로그인, 로그아웃 버튼을 "로그인"으로 설정
                 break;
-            case CMInfo.CM_CONNECT:
-                m_startStopButton.setText("클라이언트 종료");
-                m_loginLogoutButton.setText("로그인");
-                //m_leftButtonPanel.setVisible(false);
-                //m_westScroll.setVisible(false);
+            case CMInfo.CM_CONNECT:  // CM_CONNECT인 경우(클라이언트가 접속된 경우)
+                m_startStopButton.setText("클라이언트 종료");  // 시작, 종료 버튼을 "클라이언트 종료"로 설정
+                m_loginLogoutButton.setText("로그인");  // 로그인, 로그아웃 버튼을 "로그인"으로 설정
                 break;
-            case CMInfo.CM_LOGIN:
-                m_startStopButton.setText("클라이언트 종료");
-                m_loginLogoutButton.setText("로그아웃");
-                //m_leftButtonPanel.setVisible(false);
-                //m_westScroll.setVisible(false);
+            case CMInfo.CM_LOGIN:  // CM_LOGIN인 경우(클라이언트가 로그인한 경우)
+                m_startStopButton.setText("클라이언트 종료");  // 시작, 종료 버튼을 "클라이언트 종료"로 설정
+                m_loginLogoutButton.setText("로그아웃");  // 로그인, 로그아웃 버튼을 "로그아웃"으로 설정
                 break;
-            case CMInfo.CM_SESSION_JOIN:
-                m_startStopButton.setText("클라이언트 종료");
-                m_loginLogoutButton.setText("로그아웃");
-                //m_leftButtonPanel.setVisible(true);
-                //m_westScroll.setVisible(true);
+            case CMInfo.CM_SESSION_JOIN:  // CM_SESSION_JOIN인 경우(클라이언트가 세션에 접속한 경우)
+                m_startStopButton.setText("클라이언트 종료");  // 시작, 종료 버튼을 "클라이언트 종료"로 설정
+                m_loginLogoutButton.setText("로그아웃");  // 로그인, 로그아웃 버튼을 "로그아웃"으로 설정
                 break;
-            default:
-                m_startStopButton.setText("클라이언트 시작");
-                m_loginLogoutButton.setText("로그인");
-                //m_leftButtonPanel.setVisible(false);
-                //m_westScroll.setVisible(false);
+            default:  // 위의 경우에 해당하지 않는 경우
+                m_startStopButton.setText("클라이언트 시작");  // 시작, 종료 버튼을 "클라이언트 시작"으로 설정
+                m_loginLogoutButton.setText("로그인");  // 로그인, 로그아웃 버튼을 "로그인"으로 설정
                 break;
         }
-        revalidate();
-        repaint();
+        revalidate();  // 컴포넌트 재배치
+        repaint();  // 컴포넌트 다시 그리기
     }
 
-    public void printMessage(String strText)
-    {
-		/*
-		m_outTextArea.append(strText);
-		m_outTextArea.setCaretPosition(m_outTextArea.getDocument().getLength());
-		*/
-        StyledDocument doc = m_outTextPane.getStyledDocument();
+    public void displayMember() {  // 현재 접속 중인 사용자를 표시하는 메소드
+        StyledDocument doc = m_memberPane.getStyledDocument();  // 스타일 정보 가져오기
+
         try {
+            m_memberPane.setText("");  // 패널의 텍스트 초기화
+            //  패널에 텍스트 출력
+            doc.insertString(doc.getLength(), "현재 접속 중인 다른 사용자\n", null);
+            m_memberPane.setCaretPosition(m_memberPane.getDocument().getLength());
+        } catch (BadLocationException e) {  // 에러 처리
+            e.printStackTrace();
+        }
+
+        CMMember groupMembers = m_clientStub.getGroupMembers();  // 접속 중인 사용자 가져오기
+        if(groupMembers == null || groupMembers.isEmpty()) {  // 다른 사용자가 없을 경우
+            try {  // 패널에 메시지 출력
+                doc.insertString(doc.getLength(), "다른 사용자가 없습니다.\n", null);
+                m_memberPane.setCaretPosition(m_memberPane.getDocument().getLength());
+            } catch (BadLocationException e) {  // 에러 처리
+                e.printStackTrace();
+            }
+            return;
+        } else {  // 다른 사용자가 있을 경우
+            try {  // 패널에 메시지 출력
+                doc.insertString(doc.getLength(), groupMembers.toString()+"\n", null);
+                m_memberPane.setCaretPosition(m_memberPane.getDocument().getLength());
+
+            } catch (BadLocationException e) {  // 에러 처리
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void clearMember() {  // 접속 중인 사용자 표시 패널 초기화
+        m_memberPane.setText("");
+    }
+
+    public void printMessage(String strText) {  // 텍스트를 출력하는 메소드
+        StyledDocument doc = m_outTextPane.getStyledDocument();  // 스타일 정보 가져오기
+        try {  // 출력 텍스트 패널에 메시지 출력
             doc.insertString(doc.getLength(), strText, null);
             m_outTextPane.setCaretPosition(m_outTextPane.getDocument().getLength());
 
-        } catch (BadLocationException e) {
+        } catch (BadLocationException e) {  // 에러 처리
             e.printStackTrace();
         }
 
         return;
     }
 
-    public void printStyledMessage(String strText, String strStyleName)
-    {
-        StyledDocument doc = m_outTextPane.getStyledDocument();
-        try {
+    public void printStyledMessage(String strText, String strStyleName) {  // 스타일이 적용된 텍스트를 출력하는 메소드
+        StyledDocument doc = m_outTextPane.getStyledDocument();  // 스타일 정보 가져오기
+        try {  // 출력 텍스트 패널에 메시지 출력
             doc.insertString(doc.getLength(), strText, doc.getStyle(strStyleName));
             m_outTextPane.setCaretPosition(m_outTextPane.getDocument().getLength());
-
-        } catch (BadLocationException e) {
+        } catch (BadLocationException e) {  // 에러 처리
             e.printStackTrace();
         }
 
         return;
     }
 
-    private void processInput(String strInput)
-    {
-        int nCommand = -1;
+    private void processInput(String strInput) { // 입력한 값에 따라 각각의 기능을 호출하는 메소드
+        int nCommand = -1;  // 입력한 값
         try {
-            nCommand = Integer.parseInt(strInput);
-        } catch (NumberFormatException e) {
+            nCommand = Integer.parseInt(strInput);  // 입력한 값을 정수로 변환
+        } catch (NumberFormatException e) {  // 기능을 수행할 수 있는 입력이 아닌 경우 에러 처리
             printMessage("알 수 없는 번호입니다.\n");
             return;
         }
 
-        switch (nCommand) {
-            case 0:
+        switch (nCommand) {  // 입력한 값에 따라 아래의 기능을 호출
+            case 0:  // 사용 가능한 모든 기능 표시
                 printAllMenus();
                 break;
-            case 100:
+            case 100:  // 클라이언트 시작
                 testStartCM();
                 break;
-            case 999:
+            case 999:  // 클라이언트 종료
                 testTerminateCM();
                 break;
             case 1: // 기본 서버에 접속
@@ -330,703 +266,326 @@ public class CMClientWinApp extends JFrame{
             case 2: // 기본 서버에 접속 해제
                 testDisconnectionDS();
                 break;
-//                case 3: // connect to a designated server
-//                    testConnectToServer();
-//                    break;
-//                case 4: // disconnect from a designated server
-//                    testDisconnectFromServer();
-//                    break;
-//            case 10: // 기본 서버에 비동기식으로 로그인
-//                testLoginDS();
-//                break;
             case 11: // 기본 서버에 동기식으로 로그인
                 testSyncLoginDS();
                 break;
             case 12: // 기본 서버에 로그아웃
                 testLogoutDS();
                 break;
-//                case 13: // log in to a designated server
-//                    testLoginServer();
-//                    break;
-//                case 14: // log out from a designated server
-//                    testLogoutServer();
-//                    break;
-//                case 20: // request session info from default server
-//                    testSessionInfoDS();
-//                    break;
-//                case 21: // synchronously request session info from default server
-//                    testSyncSessionInfoDS();
-//                    break;
-//                case 22: // join a session
-//                    testJoinSession();
-//                    break;
-//                case 23: // synchronously join a session
-//                    testSyncJoinSession();
-//                    break;
-//                case 24: // leave the current session
-//                    testLeaveSession();
-//                    break;
-//                case 25: // change current group
-//                    testChangeGroup();
-//                    break;
-//                case 26: // print group members
-//                    testPrintGroupMembers();
-//                    break;
-//                case 27: // request session information from a designated server
-//                    testRequestSessionInfoOfServer();
-//                    break;
-//                case 28: // join a session of a designated server
-//                    testJoinSessionOfServer();
-//                    break;
-//                case 29: // leave a session of a designated server
-//                    testLeaveSessionOfServer();
-//                    break;
-//                case 40: // chat
-//                    testChat();
-//                    break;
-//                case 41: // test multicast chat in current group
-//                    testMulticastChat();
-//                    break;
-            case 42: // CMDummyEvent 테스트
+            case 42: // 간단한 메시지 보내기
                 testDummyEvent();
                 break;
-//                case 43: // test CMUserEvent
-//                    testUserEvent();
-//                    break;
-//                case 44: // test datagram message
-//                    testDatagram();
-//                    break;
-//                case 45: // user position
-//                    testUserPosition();
-//                    break;
-//                case 46: // test sendrecv
-//                    testSendRecv();
-//                    break;
-//                case 47: // test castrecv
-//                    testCastRecv();
-//                    break;
-//                case 48: // test asynchronous sendrecv
-//                    testAsyncSendRecv();
-//                    break;
-//                case 49: // test asynchronous castrecv
-//                    testAsyncCastRecv();
-//                    break;
-//                case 50: // print group info
-//                    testPrintGroupInfo();
-//                    break;
-//                case 51: // print current information about the client
-//                    testCurrentUserStatus();
-//                    break;
-//                case 52:    // print current channels information
-//                    testPrintCurrentChannelInfo();
-//                    break;
-//                case 53: // request additional server info
-//                    testRequestServerInfo();
-//                    break;
-//                case 54: // print current group info of a designated server
-//                    testPrintGroupInfoOfServer();
-//                    break;
-//                case 55: // test input network throughput
-//                    testMeasureInputThroughput();
-//                    break;
-//                case 56: // test output network throughput
-//                    testMeasureOutputThroughput();
-//                    break;
-//                case 57: // print all configurations
-//                    testPrintConfigurations();
-//                    break;
-//                case 58: // change configuration
-//                    testChangeConfiguration();
-//                    break;
-//                case 59: // show current thread information
-//                    printThreadInfo();
-//                    break;
-//                case 60: // add additional channel
-//                    testAddChannel();
-//                    break;
-//                case 61: // remove additional channel
-//                    testRemoveChannel();
-//                    break;
-//                case 62: // test blocking channel
-//                    testBlockingChannel();
-//                    break;
-//                case 70: // set file path
-//                    testSetFilePath();
-//                    break;
             case 71: // 파일 요청
                 testRequestFile();
                 break;
             case 72: // 파일 전송
                 testPushFile();
                 break;
-//                case 73:    // test cancel receiving a file
-//                    cancelRecvFile();
-//                    break;
-//                case 74:    // test cancel sending a file
-//                    cancelSendFile();
-//                    break;
-//                case 75:    // print sending/receiving file info
-//                    printSendRecvFileInfo();
-//                    break;
-//                case 80: // test SNS content download
-//                    testDownloadNewSNSContent();
-//                    break;
-//                case 81:
-//                    testDownloadNextSNSContent();
-//                    break;
-//                case 82:
-//                    testDownloadPreviousSNSContent();
-//                    break;
-//                case 83: // request an attached file of SNS content
-//                    testRequestAttachedFileOfSNSContent();
-//                    break;
-//                case 84: // test SNS content upload
-//                    testSNSContentUpload();
-//                    break;
-//                case 90: // register user
-//                    testRegisterUser();
-//                    break;
-//                case 91: // deregister user
-//                    testDeregisterUser();
-//                    break;
-//                case 92: // find user
-//                    testFindRegisteredUser();
-//                    break;
-//                case 93: // add a new friend
-//                    testAddNewFriend();
-//                    break;
-//                case 94: // remove a friend
-//                    testRemoveFriend();
-//                    break;
-//                case 95: // request current friends list
-//                    testRequestFriendsList();
-//                    break;
-//                case 96: // request friend requesters list
-//                    testRequestFriendRequestersList();
-//                    break;
-//                case 97: // request bi-directional friends
-//                    testRequestBiFriendsList();
-//                    break;
-//                case 101: // test forwarding schemes (typical vs. internal)
-//                    testForwarding();
-//                    break;
-//                case 102: // test delay of forwarding schemes
-//                    testForwardingDelay();
-//                    break;
-//                case 103: // test repeated downloading of SNS content
-//                    testRepeatedSNSContentDownload();
-//                    break;
-//                case 104: // pull or push multiple files
-//                    testSendMultipleFiles();
-//                    break;
-//                case 105: // split a file
-//                    testSplitFile();
-//                    break;
-//                case 106: // merge files
-//                    testMergeFiles();
-//                    break;
-//                case 107: // distribute a file and merge
-//                    testDistFileProc();
-//                    break;
-//                case 108: // send an event with wrong # bytes
-//                    testSendEventWithWrongByteNum();
-//                    break;
-//                case 109: // send an event with wrong event type
-//                    testSendEventWithWrongEventType();
-//                    break;
-//                case 112: // create test files for file-sync
-//                    testCreateTestFileForSync();
-//                    break;
-//                case 113: // test file access for file-sync
-//                    testFileAccessForSync();
-//                    break;
-//                case 200: // MQTT connect
-//                    testMqttConnect();
-//                    break;
-//                case 201: // MQTT publish
-//                    testMqttPublish();
-//                    break;
-//                case 202: // MQTT subscribe
-//                    testMqttSubscribe();
-//                    break;
-//                case 203: // print MQTT session info
-//                    testPrintMqttSessionInfo();
-//                    break;
-//                case 204: // MQTT unsubscribe
-//                    testMqttUnsubscribe();
-//                    break;
-//                case 205: // MQTT disconnect
-//                    testMqttDisconnect();
-//                    break;
-//                case 300:    // start file-sync with manual mode
-//                    testStartFileSyncWithManualMode();
-//                    break;
-//                case 301:    // stop file-sync
-//                    testStopFileSync();
-//                    break;
-//                case 302:    // open file-sync folder
-//                    testOpenFileSyncFolder();
-//                    break;
-//                case 303:    // request file-sync online mode
-//                    testRequestFileSyncOnlineMode();
-//                    break;
-//                case 304:    // request file-sync local mode
-//                    testRequestFileSyncLocalMode();
-//                    break;
-//                case 305:    // print online mode files
-//                    testPrintOnlineModeFiles();
-//                    break;
-//                case 306:    // print local mode files
-//                    testPrintLocalModeFiles();
-//                    break;
-//                case 307:	// start file-sync with auto mode
-//                    testStartFileSyncWithAutoMode();
-//                    break;
-//                case 308:	// print current file-sync mode
-//                    testPrintCurrentFileSyncMode();
-//                    break;
             default:
                 printMessage("없는 번호입니다.");
                 break;
         }
     }
 
-    private void printAllMenus()
-    {
+    private void printAllMenus() {  // 사용할 수 있는 기능과 입력할 값 안내
         printMessage("---------------------------------- 도움말\n");
         printMessage("0: 모든 메뉴 보기\n");
         printMessage("---------------------------------- 시작/종료\n");
         printMessage("100: CM 시작, 999: CM 종료\n");
         printMessage("---------------------------------- 연결\n");
         printMessage("1: 기본 서버에 접속, 2: 기본 서버에 접속 해제\n");
-//        printMessage("3: connect to designated server, 4: disconnect from designated server");
         printMessage("---------------------------------- 로그인\n");
-        printMessage(/*10: 기본 서버에 비동기식으로 로그인, */"11: 기본 서버에 동기식으로 로그인");
+        printMessage("11: 기본 서버에 동기식으로 로그인\n");
         printMessage("12: 기본 서버에 로그아웃\n");
-//        printMessage("13: login to designated server, 14: logout from designated server\n");
-//        printMessage("---------------------------------- Session/Group\n");
-//        printMessage("20: request session information from default server\n");
-//        printMessage("21: synchronously request session information from default server\n");
-//        printMessage("22: join session of default server, 23: synchronously join session of default server\n");
-//        printMessage("24: leave session of default server, 25: change group of default server\n");
-//        printMessage("26: print group members\n");
-//        printMessage("27: request session information from designated server\n");
-//        printMessage("28: join session of designated server, 29: leave session of designated server\n");
         printMessage("---------------------------------- Event 전송\n");
-//        printMessage("40: chat, 41: multicast chat in current group\n");
-        printMessage("42: CMDummyEvent 테스트\n" /*, 43: test CMUserEvent, 44: test datagram event, 45: test user position"*/);
-//        printMessage("46: test sendrecv, 47: test castrecv\n");
-//        printMessage("48: test asynchronous sendrecv, 49: test asynchronous castrecv\n");
-//        printMessage("---------------------------------- Information\n");
-//        printMessage("50: show group information of default server, 51: show current user status\n");
-//        printMessage("52: show current channels, 53: show current server information\n");
-//        printMessage("54: show group information of designated server\n");
-//        printMessage("55: measure input network throughput, 56: measure output network throughput\n");
-//        printMessage("57: show all configurations, 58: change configuration\n");
-//        printMessage("59: show current thread information\n");
-//        printMessage("---------------------------------- Channel\n");
-//        printMessage("60: add channel, 61: remove channel, 62: test blocking channel\n");
+        printMessage("42: 간단한 메시지 보내기\n");
         printMessage("---------------------------------- 파일 전송\n");
         printMessage(/*"70: set file path,*/ "71: 파일 요청, 72: 파일 전송\n");
-//        printMessage("73: cancel receiving file, 74: cancel sending file\n");
-//        printMessage("75: print sending/receiving file info\n");
-//        printMessage("---------------------------------- Social Network Service\n");
-//        printMessage("80: request content list, 81: request next content list, 82: request previous content list\n");
-//        printMessage("83: request attached file, 84: upload content\n");
-//        printMessage("---------------------------------- User\n");
-//        printMessage("90: register new user, 91: deregister user, 92: find registered user\n");
-//        printMessage("93: add new friend, 94: remove friend, 95: show friends, 96: show friend requesters\n");
-//        printMessage("97: show bi-directional friends\n");
-//        printMessage("---------------------------------- MQTT\n");
-//        printMessage("200: connect, 201: publish, 202: subscribe, 203: print session info\n");
-//        printMessage("204: unsubscribe, 205: disconnect \n");
-//        printMessage("---------------------------------- File Sync\n");
-//        printMessage("300: start file-sync with manual mode, 301: stop file-sync\n");
-//        printMessage("302: open file-sync folder\n");
-//        printMessage("303: request online mode, 304: request local mode\n");
-//        printMessage("305: print online mode files, 306: print local mode files\n");
-//        printMessage("307: start file-sync with auto mode, 308: print current file-sync mode\n");
-//        printMessage("---------------------------------- Other CM Tests\n");
-//        printMessage("101: test forwarding scheme, 102: test delay of forwarding scheme\n");
-//        printMessage("103: test repeated request of SNS content list\n");
-//        printMessage("104: pull/push multiple files, 105: split file, 106: merge files, 107: distribute and merge file\n");
-//        printMessage("108: send event with wrong # bytes, 109: send event with wrong type\n");
-//        printMessage("110: test csc file transfer, 111: test c2c file transfer\n");
-//        printMessage("112: create test files for file-sync\n");
-//        printMessage("113: test file access for file-sync\n");
     }
 
-    private void testStartCM()
-    {
-        boolean bRet = m_clientStub.startCM();
-        if(!bRet)
-        {
+    private void testStartCM() {  // 클라이언트 시작 메소드
+        boolean bRet = m_clientStub.startCM();  // 시작 여부
+        if(!bRet) {  // 정상적으로 클라이언트 시작이 안될 시 에러 발생
             printStyledMessage("CM 초기화 오류.\n", "bold");
-        }
-        else
-        {
-            m_startStopButton.setEnabled(true);
-            m_loginLogoutButton.setEnabled(true);
+        } else {  // 정상적으로 클라이언트 시작 시
             printStyledMessage("클라이언트 시작\n", "bold");
             printStyledMessage("메뉴를 보려면 \"0\"을 입력하세요.\n", "regular");
-            // change the appearance of buttons in the client window frame
-            setButtonsAccordingToClientState();
+            setButtonsAccordingToClientState();  // 클라이언트 상태에 맞게 버튼 설정
         }
     }
 
-    public void testConnectionDS()
-    {
+    public void testConnectionDS() {  // 서버 접속 메소드
         printMessage("====== 기본 서버에 접속합니다.\n");
-        boolean ret = m_clientStub.connectToServer();
-        if(ret)
-        {
+        boolean ret = m_clientStub.connectToServer();  // 접속 여부
+        if(ret) {  // 접속에 성공했을 경우
             printMessage("성공적으로 기본 서버에 접속했습니다.\n");
-        }
-        else
-        {
+        } else {  // 접속에 실패했을 경우
             printMessage("기본 서버에 접속할 수 없습니다.\n");
         }
         printMessage("======\n");
 
-        setButtonsAccordingToClientState();
+        setButtonsAccordingToClientState();  // 클라이언트 상태에 맞게 버튼 설정
     }
 
-    public void testDisconnectionDS()
-    {
+    public void testDisconnectionDS() {  // 서버 접속 해제 메소드
         printMessage("====== 기본 서버에서 접속을 해제합니다.\n");
-        boolean ret = m_clientStub.disconnectFromServer();
-        if(ret)
-        {
+        boolean ret = m_clientStub.disconnectFromServer();  // 접속 해제 여부
+        if(ret) {  // 접속 해제에 성공했을 경우
             printMessage("성공적으로 기본 서버에서 접속을 해제했습니다.\n");
-        }
-        else
-        {
+        } else {  // 접속 해제에 실패했을 경우
             printMessage("기본 서버에서 접속을 해제하던 도중 오류가 발생했습니다.\n");
         }
         printMessage("======\n");
 
-        setButtonsAccordingToClientState();
-        setTitle("CMClientWinApp");
+        setButtonsAccordingToClientState();  // 클라이언트 상태에 맞게 버튼 설정
+        setTitle("CMClientWinApp");  // 프레임의 타이틀을 재설정
     }
 
-//    private void testLoginDS()
-//    {
-//        String strUserName = null;
-//        String strPassword = null;
-//        boolean bRequestResult = false;
-//
-//        printMessage("====== 기본 서버에 로그인합니다.\n");
-//        JTextField userNameField = new JTextField();
-//        JPasswordField passwordField = new JPasswordField();
-//        Object[] message = {
-//                "사용자 이름:", userNameField,
-//                "비밀번호:", passwordField
-//        };
-//        int option = JOptionPane.showConfirmDialog(null, message, "로그인 입력", JOptionPane.OK_CANCEL_OPTION);
-//        if (option == JOptionPane.OK_OPTION)
-//        {
-//            strUserName = userNameField.getText();
-//            strPassword = new String(passwordField.getPassword()); // security problem?
-//
-//            m_eventHandler.setStartTime(System.currentTimeMillis());
-//            bRequestResult = m_clientStub.loginCM(strUserName, strPassword);
-////            long lDelay = System.currentTimeMillis() - m_eventHandler.getStartTime();
-//            if(bRequestResult)
-//            {
-//                printMessage("성공적으로 로그인 요청을 보냈습니다.\n");
-////                printMessage("return delay: "+lDelay+" ms.\n");
-//            }
-//            else
-//            {
-//                printStyledMessage("로그인 요청이 실패했습니다.\n", "bold");
-//                m_eventHandler.setStartTime(0);
-//            }
-//        }
-//        setButtonsAccordingToClientState();
-//        printMessage("======\n");
-//    }
-
-    private void testSyncLoginDS()
-    {
-        String strUserName = null;
-        String strPassword = null;
-        CMSessionEvent loginAckEvent = null;
+    private void testSyncLoginDS() {  // 동기식으로 로그인하는 메소드
+        String strUserName = null;  // 사용자 ID
+        String strPassword = null;  // 사용자 PW
+        CMSessionEvent loginAckEvent = null;  // 인증 여부
 
         printMessage("====== 기본 서버에 동기식으로 로그인합니다.\n");
-        JTextField userNameField = new JTextField();
-        JPasswordField passwordField = new JPasswordField();
-        Object[] message = {
+        JTextField userNameField = new JTextField();  // 사용자 ID를 받는 필드 생성
+        JPasswordField passwordField = new JPasswordField();  // 사용자 PW를 받는 필드 생성
+        Object[] message = {  // 필드에 입력한 값을 배열로 저장
                 "사용자 이름:", userNameField,
                 "비밀번호:", passwordField
         };
-        int option = JOptionPane.showConfirmDialog(null, message, "로그인 입력", JOptionPane.OK_CANCEL_OPTION);
-        if (option == JOptionPane.OK_OPTION)
-        {
-            strUserName = userNameField.getText();
-            strPassword = new String(passwordField.getPassword()); // security problem?
+        int option = JOptionPane.showConfirmDialog(null, message, "로그인 입력", JOptionPane.OK_CANCEL_OPTION);  // 로그인을 하는 창
+        if (option == JOptionPane.OK_OPTION) {  // 로그인을 하는 창에서 OK 클릭 시
+            strUserName = userNameField.getText();  // 로그인을 하는 창에서 사용자 ID 가져오기
+            strPassword = new String(passwordField.getPassword()); // 로그인을 하는 창에서 사용자 PW 가져오기
 
-            m_eventHandler.setStartTime(System.currentTimeMillis());
-            loginAckEvent = m_clientStub.syncLoginCM(strUserName, strPassword);
-//            long lDelay = System.currentTimeMillis() - m_eventHandler.getStartTime();
-            if(loginAckEvent != null)
-            {
-                // print login result
-                if(loginAckEvent.isValidUser() == 0)
-                {
+            m_eventHandler.setStartTime(System.currentTimeMillis());  // 접속 시작 시작 설정
+            loginAckEvent = m_clientStub.syncLoginCM(strUserName, strPassword);  // 인증된 사용자 여부
+            if(loginAckEvent != null) {  // 로그인 요청에 성공한 경우
+                if(loginAckEvent.isValidUser() == 0) {  // 인증되지 않은 사용자인 경우
                     printMessage("기본 서버에 의해 인증에 실패했습니다.\n");
-                }
-                else if(loginAckEvent.isValidUser() == -1)
-                {
+                } else if(loginAckEvent.isValidUser() == -1) {  // 이미 로그인되어 있는 경우
                     printMessage("이미 로그인되어 있습니다.\n");
-                }
-                else
-                {
-//                    printMessage("return delay: "+lDelay+" ms.\n");
+                } else {  // 로그인에 성공한 경우
                     printMessage("성공적으로 기본 서버에 로그인했습니다.\n");
                     CMInteractionInfo interInfo = m_clientStub.getCMInfo().getInteractionInfo();
 
-                    setTitle("CMClientWinApp ("+interInfo.getMyself().getName()+")");
-
-                    // Set the appearance of buttons in the client frame window
-                    setButtonsAccordingToClientState();
+                    setTitle("CMClientWinApp ("+interInfo.getMyself().getName()+")");  // 프레임의 타이틀 재설정
+                    
+                    setButtonsAccordingToClientState();  // 클라이언트 상태에 맞게 버튼 재설정
                 }
-            }
-            else
-            {
+            } else {  // 로그인 요청에 실패한 경우
                 printStyledMessage("로그인 요청에 실패했습니다.\n", "bold");
             }
-
         }
 
         printMessage("======\n");
     }
 
-    private void testLogoutDS()
-    {
-        boolean bRequestResult = false;
+    private void testLogoutDS() {  // 로그아웃 메소드
+        boolean bRequestResult = false;  // 요청 결과
         printMessage("====== 기본 서버에 로그아웃\n");
-        bRequestResult = m_clientStub.logoutCM();
-        if(bRequestResult)
+        bRequestResult = m_clientStub.logoutCM(); // 로그아웃 요청 결과 저장
+        if(bRequestResult) {  // 로그아웃 요청에 성공한 경우
             printMessage("성공적으로 로그아웃 요청을 보냈습니다.\n");
-        else
+            clearMember();  // 접속 중인 사용자를 표시하는 패널 초기화
+            setButtonsAccordingToClientState();  // 클라이언트 상태에 맞게 버튼 재설정
+            setTitle("CMClientWinApp");  // 프레임의 타이틀 재설정
+        }
+        else {  // 로그아웃 요청에 실패한 경우
             printStyledMessage("로그아웃 요청이 실패했습니다.\n", "bold");
+        }
         printMessage("======\n");
-
-        // Change the title of the login button
-        setButtonsAccordingToClientState();
-        setTitle("CMClientWinApp");
     }
 
-    public void testDummyEvent()
-    {
-        String strMessage = null;
-        String strTarget = null;
-        CMDummyEvent due = null;
+    public void testDummyEvent() {  // 간단한 메시지를 보내는 메소드
+        String strMessage = null;  // 메시지 내용
+        String strTarget = null;  // 메시지 수신자
+        CMDummyEvent due = null;  // 이벤트
 
         CMInteractionInfo interInfo = m_clientStub.getCMInfo().getInteractionInfo();
-        CMUser myself = interInfo.getMyself();
+        CMUser myself = interInfo.getMyself();  //송신자 정보 가져오기
 
-        if(myself.getState() != CMInfo.CM_SESSION_JOIN)
-        {
+        if(myself.getState() != CMInfo.CM_SESSION_JOIN) {  // 세션에 접속하지 않은 경우
             printMessage("세션과 그룹에 속해있어야 합니다.\n");
             return;
         }
 
-        printMessage("====== 현재 그룹에서 CMDummyEvent 테스트\n");
+        printMessage("====== 현재 그룹에서 간단한 메시지 보내기\n");
 
-        JTextField messageField = new JTextField();
-        JTextField targetField = new JTextField();
+        JTextField messageField = new JTextField();  // 메시지 내용을 담는 필드
+        JTextField targetField = new JTextField();  // 메시지 수신자를 담는 필드
 
-        Object[] msg = {
+        Object[] msg = {  // 메시지 내용과 메시지 수신자를 배열로 저장
                 "메시지: ", messageField,
                 "수신 사용자 (send() 메소드 사용 시): ", targetField,
         };
-        int option = JOptionPane.showConfirmDialog(null, msg, "더미 이벤트 전송",
-                JOptionPane.OK_CANCEL_OPTION);
-        if(option == JOptionPane.OK_OPTION)
-        {
-            strMessage = messageField.getText().trim();
-            strTarget = targetField.getText().trim();
+        int option = JOptionPane.showConfirmDialog(null, msg, "간단한 메시지 전송",
+                JOptionPane.OK_CANCEL_OPTION);  // 메시지 전송 창
+        if(option == JOptionPane.OK_OPTION) {  // 메시지 전송 창에서 OK를 눌렀을 경우
+            strMessage = messageField.getText().trim();  // 입력한 메시지에서 좌우 띄어쓰기는 제거
+            strTarget = targetField.getText().trim();  // 입력한 수신자에서 좌우 띄어쓰기는 제거
 
-            if(strMessage.isEmpty())
-            {
+            if(strMessage.isEmpty()) {  // 입력한 메시지가 없는 경우
                 printStyledMessage("메시지를 입력하지 않았습니다.\n", "bold");
                 return;
             }
 
+            // 이벤트 처리
             due = new CMDummyEvent();
             due.setDummyInfo(strMessage);
             due.setHandlerSession(myself.getCurrentSession());
             due.setHandlerGroup(myself.getCurrentGroup());
 
-            if(!strTarget.isEmpty())
-            {
-                m_clientStub.send(due, strTarget);
+            if(!strTarget.isEmpty()) {  // 수신자를 입력한 경우
+                m_clientStub.send(due, strTarget);  // 메시지 전송
             }
             printMessage("======\n");
         }
     }
 
-    // 파일 수신 완료 메시지 전달용으로 testDummyEvent() 오버로딩
-    public void testDummyEvent(String constMsg, String fileSender)
+    public void testDummyEvent(String constMsg, String fileSender)  // 파일 수신 완료 메시지 전달용으로 testDummyEvent() 오버로딩
     {
-
-        String strMessage = constMsg;
-        String strTarget = fileSender;
-        CMDummyEvent due = null;
+        String strMessage = constMsg;  // 파일 수신 완료 메시지
+        String strTarget = fileSender;  // 파일 송신자
+        CMDummyEvent due = null;  // 이벤트
 
         CMInteractionInfo interInfo = m_clientStub.getCMInfo().getInteractionInfo();
-        CMUser myself = interInfo.getMyself();
+        CMUser myself = interInfo.getMyself();  // 사용자 정보 저장
 
+        // 이벤트 처리
         due = new CMDummyEvent();
         due.setDummyInfo(strMessage);
         due.setHandlerSession(myself.getCurrentSession());
         due.setHandlerGroup(myself.getCurrentGroup());
 
-        m_clientStub.send(due, strTarget);
+        m_clientStub.send(due, strTarget);  // 수신 완료 메시지 전달
     }
 
-    private void testRequestFile()
-    {
-        boolean bReturn = false;
-        String strFileName = null;
-        String strFileOwner = null;
-        byte byteFileAppendMode = -1;
+    private void testRequestFile() {  // 파일 요청 메소드
+        boolean bReturn = false;  // 파일 요청 이상 여부
+        String strFileName = null;  // 파일 이름
+        String strFileOwner = null;  // 파일 소유자
+        byte byteFileAppendMode = -1;  // 파일 전송 모드
         CMInteractionInfo interInfo = m_clientStub.getCMInfo().getInteractionInfo();
 
         printMessage("====== 파일 요청\n");
 
-        JTextField fnameField = new JTextField();
-        JTextField fownerField = new JTextField();
-        String[] fAppendMode = {"기본값", "덮어쓰기", "덧붙이기"};
-        JComboBox<String> fAppendBox = new JComboBox<String>(fAppendMode);
+        JTextField fnameField = new JTextField();  // 파일 이름 필드
+        JTextField fownerField = new JTextField();  // 파일 소유자 필드
+        String[] fAppendMode = {"기본값", "덮어쓰기", "덧붙이기"};  // 파일 전송 모드 필드
+        JComboBox<String> fAppendBox = new JComboBox<String>(fAppendMode);  // 콤보 박스로 전송 모드 설정
 
-        Object[] message = {
+        Object[] message = {  // 파일 이름, 파일 소유자, 파일 전송 모드를 담는 배열
                 "파일 이름: ", fnameField,
                 "파일 소유자(공백은 기본 서버): ", fownerField,
                 "파일 추가 모드: ", fAppendBox
         };
-        int option = JOptionPane.showConfirmDialog(null, message, "파일 요청", JOptionPane.OK_CANCEL_OPTION);
-        if(option == JOptionPane.CANCEL_OPTION || option != JOptionPane.OK_OPTION)
-        {
+        int option = JOptionPane.showConfirmDialog(null, message, "파일 요청", JOptionPane.OK_CANCEL_OPTION);  // 요청 확인 다이얼로그
+        if(option == JOptionPane.CANCEL_OPTION || option != JOptionPane.OK_OPTION) {  // 요청 취소 시
             printMessage("취소했습니다.\n");
             return;
         }
 
-        strFileName = fnameField.getText().trim();
-        if(strFileName.isEmpty())
-        {
+        strFileName = fnameField.getText().trim();  // 입력한 파일 이름에서 좌우 띄어쓰기 제거
+        if(strFileName.isEmpty()) {  // 파일 이름을 입력하지 않은 경우
             printMessage("파일 이름을 입력하지 않았습니다.\n");
             return;
         }
-        strFileOwner = fownerField.getText().trim();
-        if(strFileOwner.isEmpty())
-            strFileOwner = interInfo.getDefaultServerInfo().getServerName();
+        strFileOwner = fownerField.getText().trim();  // 입력한 파일 소유자에서 좌우 띄어쓰기 제거
+        if(strFileOwner.isEmpty())  // 파일 소유자를 입력하지 않은 경우
+            strFileOwner = interInfo.getDefaultServerInfo().getServerName();  // 소유자를 서버로 설정
 
-        switch(fAppendBox.getSelectedIndex())
-        {
-            case 0:
+        switch(fAppendBox.getSelectedIndex()) {  // 파일 전송 모드
+            case 0:  // 기본값으로 설정
                 byteFileAppendMode = CMInfo.FILE_DEFAULT;
                 break;
-            case 1:
+            case 1:  // 덮어쓰기로 설정
                 byteFileAppendMode = CMInfo.FILE_OVERWRITE;
                 break;
-            case 2:
+            case 2:  // 덧붙이기로 설정
                 byteFileAppendMode = CMInfo.FILE_APPEND;
                 break;
         }
 
-        bReturn = m_clientStub.requestFile(strFileName, strFileOwner, byteFileAppendMode);
+        bReturn = m_clientStub.requestFile(strFileName, strFileOwner, byteFileAppendMode);  // 파일 요청 이상 여부
 
-        if(!bReturn)
+        if(!bReturn)  // 파일 요청에 문제가 발생하면 에러 발생
             printMessage("파일 요청 오류. 파일("+strFileName+"), 소유자("+strFileOwner+").\n");
 
         printMessage("======\n");
     }
 
-    private void testPushFile()
-    {
-        String strFilePath = null;
-        File[] files = null;
-        String strReceiver = null;
-        byte byteFileAppendMode = -1;
+    private void testPushFile() {  // 파일 전송 메소드
+        String strFilePath = null;  // 파일 경로
+        File[] files = null;  // 파일 이름
+        String strReceiver = null;  // 파일 수신자
+        byte byteFileAppendMode = -1;  // 파일 전송 모드
         CMInteractionInfo interInfo = m_clientStub.getCMInfo().getInteractionInfo();
-        boolean bReturn = false;
+        boolean bReturn = false;  // 파일 전송 이상 여부
 
         printMessage("====== 파일 전송\n");
 
-		/*
-		strReceiver = JOptionPane.showInputDialog("Receiver Name: ");
-		if(strReceiver == null) return;
-		*/
-        JTextField freceiverField = new JTextField();
-        String[] fAppendMode = {"기본값", "덮어쓰기", "덧붙이기"};
-        JComboBox<String> fAppendBox = new JComboBox<String>(fAppendMode);
+        JTextField freceiverField = new JTextField();  // 수신자 입력 필드
+        String[] fAppendMode = {"기본값", "덮어쓰기", "덧붙이기"};  // 파일 전송 모드 필드
+        JComboBox<String> fAppendBox = new JComboBox<String>(fAppendMode);  // 콤보 박스로 파일 전송 모드 설정
 
-        Object[] message = {
+        Object[] message = {  // 파일 수신자, 파일 전송 모드를 담는 배열
                 "파일 수신자(공백은 기본 서버): ", freceiverField,
                 "파일 추가 모드: ", fAppendBox
         };
-        int option = JOptionPane.showConfirmDialog(null, message, "파일 전송", JOptionPane.OK_CANCEL_OPTION);
-        if(option == JOptionPane.CANCEL_OPTION || option != JOptionPane.OK_OPTION)
-        {
+        int option = JOptionPane.showConfirmDialog(null, message, "파일 전송", JOptionPane.OK_CANCEL_OPTION);  // 파일 전송 확인 창
+        if(option == JOptionPane.CANCEL_OPTION || option != JOptionPane.OK_OPTION) {  // 파일 전송 취소 시
             printMessage("취소했습니다.\n");
             return;
         }
 
-        strReceiver = freceiverField.getText().trim();
-        if(strReceiver.isEmpty())
-            strReceiver = interInfo.getDefaultServerInfo().getServerName();
+        strReceiver = freceiverField.getText().trim();  // 입력한 파일 수신자의 좌우 띄어쓰기 제거
+        if(strReceiver.isEmpty())  // 파일 수신자를 입력하지 않은 경우
+            strReceiver = interInfo.getDefaultServerInfo().getServerName();  // 파일 수신자를 서버로 설정
 
-        switch(fAppendBox.getSelectedIndex())
-        {
-            case 0:
+        switch(fAppendBox.getSelectedIndex()) {  // 파일 전송 모드
+            case 0:  // 기본값으로 설정
                 byteFileAppendMode = CMInfo.FILE_DEFAULT;
                 break;
-            case 1:
+            case 1:  // 덮어쓰기로 설정
                 byteFileAppendMode = CMInfo.FILE_OVERWRITE;
                 break;
-            case 2:
+            case 2:  // 덧붙이기로 설정
                 byteFileAppendMode = CMInfo.FILE_APPEND;
                 break;
         }
 
-        JFileChooser fc = new JFileChooser();
-        fc.setMultiSelectionEnabled(true);
-        CMConfigurationInfo confInfo = m_clientStub.getCMInfo().getConfigurationInfo();
-        File curDir = new File(confInfo.getTransferedFileHome().toString());
-        fc.setCurrentDirectory(curDir);
-        int fcRet = fc.showOpenDialog(this);
+        JFileChooser fc = new JFileChooser();  // 파일 선택자 생성
+        fc.setMultiSelectionEnabled(true);  // 여러 파일 선택 가능하도록 설정
+        CMConfigurationInfo confInfo = m_clientStub.getCMInfo().getConfigurationInfo();  // CM 설정 가져오기
+        File curDir = new File(confInfo.getTransferedFileHome().toString());  // 파일 현재 경로 가져오기
+        fc.setCurrentDirectory(curDir);  // 파일 현재 경로
+        int fcRet = fc.showOpenDialog(this);  // 열기 창
         if(fcRet != JFileChooser.APPROVE_OPTION) return;
-        files = fc.getSelectedFiles();
-        if(files.length < 1) return;
-        for(int i=0; i < files.length; i++)
-        {
-            strFilePath = files[i].getPath();
-            bReturn = m_clientStub.pushFile(strFilePath, strReceiver, byteFileAppendMode);
-            if(!bReturn)
-            {
-                printMessage("파일 전송 오류 파일("+strFilePath+"), 수신자("
-                        +strReceiver+")\n");
+        files = fc.getSelectedFiles();  // 선택한 파일
+        if(files.length < 1) return;  // 선택한 파일이 없을 경우 바로 리턴
+        for(int i=0; i < files.length; i++) {  // 선택한 파일이 한 개 이상일 경우
+            strFilePath = files[i].getPath();  // 각 파일마다 경로 가져오기
+            bReturn = m_clientStub.pushFile(strFilePath, strReceiver, byteFileAppendMode);  // 파일 전송
+            if(!bReturn) {  // 파일 전송이 실패한 발생한 경우
+                printMessage("파일 전송 오류 파일("+strFilePath+"), 수신자(" +strReceiver+")\n");
             }
         }
 
         printMessage("======\n");
     }
 
-    public void testTerminateCM()
-    {
-        //m_clientStub.disconnectFromServer();
-        m_clientStub.terminateCM();
+    public void testTerminateCM() {  // 클라이언트 종료 메소드
+        clearMember();  // 접속 중인 사용자 표시 패널 초기화
+        m_clientStub.terminateCM();  // 클라이언트 종료
         printMessage("클라이언트 종료\n");
-        // change the appearance of buttons in the client window frame
-        initializeButtons();
-        setTitle("CMClientWinApp");
+        initializeButtons();  // 버튼 재설정
+        setTitle("CMClientWinApp");  // 프레임 타이틀 재설정
     }
 
     public static void main(String[] args) {
-        CMClientWinApp client = new CMClientWinApp();
-        CMClientStub cmStub = client.getClientStub();
+        CMClientWinApp client = new CMClientWinApp();  // CMClientWinApp 객체 생성
+        CMClientStub cmStub = client.getClientStub();  // m_serverStub(CMServerStub 객체) 반환
         cmStub.setAppEventHandler(client.getClientEventHandler());
     }
 }
