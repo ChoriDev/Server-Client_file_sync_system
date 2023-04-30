@@ -1,6 +1,11 @@
 import java.awt.*;
 import java.awt.event.*;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import javax.swing.*;
 import javax.swing.text.*;
 import kr.ac.konkuk.ccslab.cm.entity.CMMember;
@@ -8,6 +13,7 @@ import kr.ac.konkuk.ccslab.cm.entity.CMUser;
 import kr.ac.konkuk.ccslab.cm.event.CMDummyEvent;
 import kr.ac.konkuk.ccslab.cm.event.CMSessionEvent;
 import kr.ac.konkuk.ccslab.cm.info.*;
+import kr.ac.konkuk.ccslab.cm.info.enums.CMFileSyncMode;
 import kr.ac.konkuk.ccslab.cm.stub.CMClientStub;
 
 public class CMClientWinApp extends JFrame{
@@ -263,23 +269,35 @@ public class CMClientWinApp extends JFrame{
             case 1: // 기본 서버에 접속
                 testConnectionDS();
                 break;
-            case 2: // 기본 서버에 접속 해제
+            case 2:  // 기본 서버에 접속 해제
                 testDisconnectionDS();
                 break;
-            case 11: // 기본 서버에 동기식으로 로그인
+            case 11:  // 기본 서버에 동기식으로 로그인
                 testSyncLoginDS();
                 break;
-            case 12: // 기본 서버에 로그아웃
+            case 12:  // 기본 서버에 로그아웃
                 testLogoutDS();
                 break;
-            case 42: // 간단한 메시지 보내기
+            case 42:  // 간단한 메시지 보내기
                 testDummyEvent();
                 break;
-            case 71: // 파일 요청
+            case 70:  // 파일 경로 변경
+                testSetFilePath();
+                break;
+            case 71:  // 파일 요청
                 testRequestFile();
                 break;
-            case 72: // 파일 전송
+            case 72:  // 파일 전송
                 testPushFile();
+                break;
+            case 300:  // 수동 모드로 파일 동기화 시작
+                testStartFileSyncWithManualMode();
+                break;
+            case 301:  //  파일 동기화 정지
+                testStopFileSync();
+                break;
+            case 302:  // 파일 동기화 폴더 열기
+                testOpenFileSyncFolder();
                 break;
             default:
                 printMessage("없는 번호입니다.");
@@ -300,7 +318,10 @@ public class CMClientWinApp extends JFrame{
         printMessage("---------------------------------- Event 전송\n");
         printMessage("42: 간단한 메시지 보내기\n");
         printMessage("---------------------------------- 파일 전송\n");
-        printMessage(/*"70: set file path,*/ "71: 파일 요청, 72: 파일 전송\n");
+        printMessage("70: 파일 경로 설정, 71: 파일 요청, 72: 파일 전송\n");
+        printMessage("---------------------------------- 파일 동기화\n");
+        printMessage("300: 수동 모드로 파일 동기화 시작, 301: 파일 동기화 정지\n");
+        printMessage("302: 파일 동기화 폴더 열기\n");
     }
 
     private void testStartCM() {  // 클라이언트 시작 메소드
@@ -461,6 +482,18 @@ public class CMClientWinApp extends JFrame{
         m_clientStub.send(due, strTarget);  // 수신 완료 메시지 전달
     }
 
+    private void testSetFilePath() {  // 파일의 경로를 변경하는 메소드
+        printMessage("====== 파일 경로 설정\n");
+        String strPath = null;  // 파일 경로 초기화
+
+        strPath = JOptionPane.showInputDialog("파일 경로: ");  // 경로로 설정할 위치 입력
+        if(strPath == null) return;  // 경로를 입력하지 않으면 바로 리턴
+
+        m_clientStub.setTransferedFileHome(Paths.get(strPath));  // 파일 경로 변경
+
+        printMessage("======\n");
+    }
+
     private void testRequestFile() {  // 파일 요청 메소드
         boolean bReturn = false;  // 파일 요청 이상 여부
         String strFileName = null;  // 파일 이름
@@ -573,6 +606,50 @@ public class CMClientWinApp extends JFrame{
         }
 
         printMessage("======\n");
+    }
+
+    private void testOpenFileSyncFolder() {  // 파일 동기화 폴더 열기 메소드
+        printMessage("========== 파일 동기화 폴더 열기\n");
+
+        Path syncHome = m_clientStub.getFileSyncHome();  // 파일 동기화 폴더 가져오기
+        if(syncHome == null) {  // 파일 동기화 폴더가 없을 경우
+            printStyledMessage("파일 동기화 폴더가 없습니다.\n", "bold");
+            printStyledMessage("더 자세한 정보는 콘솔 창의 에러 메시지를 참조하세요.\n", "bold");
+            return;
+        }
+
+        Desktop desktop = Desktop.getDesktop();
+        try {
+            desktop.open(syncHome.toFile());  // 파일 동기화 폴더 열기
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void testStartFileSyncWithManualMode() {
+        printMessage("========== 수동 모드로 파일 동기화를 시작합니다.\n");
+
+        m_eventHandler.setStartTimeOfFileSync(System.currentTimeMillis());
+
+        boolean ret = m_clientStub.startFileSync(CMFileSyncMode.MANUAL);
+        if(!ret) {
+            printStyledMessage("수동 모드로 파일 동기화를 시작하는데 에러가 발생했습니다.\n", "bold");
+            m_eventHandler.setStartTimeOfFileSync(0);
+        }
+        else {
+            printMessage("수동 모드로 파일 동기화 시작.\n");
+        }
+    }
+
+    private void testStopFileSync() {
+        printMessage("========== 파일 동기화를 정지합니다.\n");
+        boolean ret = m_clientStub.stopFileSync();
+        if(!ret) {
+            printStyledMessage("파일 동기화 정지 에러.\n", "bold");
+        }
+        else {
+            printMessage("파일 동기화 정지.\n");
+        }
     }
 
     public void testTerminateCM() {  // 클라이언트 종료 메소드

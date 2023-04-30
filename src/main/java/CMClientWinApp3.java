@@ -1,6 +1,7 @@
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
+import java.nio.file.Paths;
 import javax.swing.*;
 import javax.swing.text.*;
 import kr.ac.konkuk.ccslab.cm.entity.CMMember;
@@ -275,6 +276,9 @@ public class CMClientWinApp3 extends CMClientWinApp{
             case 42: // 간단한 메시지 보내기
                 testDummyEvent();
                 break;
+            case 70: // 파일 경로 설정
+                testSetFilePath();
+                break;
             case 71: // 파일 요청
                 testRequestFile();
                 break;
@@ -300,7 +304,7 @@ public class CMClientWinApp3 extends CMClientWinApp{
         printMessage("---------------------------------- Event 전송\n");
         printMessage("42: 간단한 메시지 보내기\n");
         printMessage("---------------------------------- 파일 전송\n");
-        printMessage(/*"70: set file path,*/ "71: 파일 요청, 72: 파일 전송\n");
+        printMessage("70: 파일 경로 설정, 71: 파일 요청, 72: 파일 전송\n");
     }
 
     private void testStartCM() {  // 클라이언트 시작 메소드
@@ -459,6 +463,18 @@ public class CMClientWinApp3 extends CMClientWinApp{
         due.setHandlerGroup(myself.getCurrentGroup());
 
         m_clientStub.send(due, strTarget);  // 수신 완료 메시지 전달
+    }
+
+    private void testSetFilePath() {  // 파일의 경로를 변경하는 메소드
+        printMessage("====== 파일 경로 설정\n");
+        String strPath = null;  // 파일 경로 초기화
+
+        strPath = JOptionPane.showInputDialog("파일 경로: ");  // 경로로 설정할 위치 입력
+        if(strPath == null) return;  // 경로를 입력하지 않으면 바로 리턴
+
+        m_clientStub.setTransferedFileHome(Paths.get(strPath));  // 파일 경로 변경
+
+        printMessage("======\n");
     }
 
     private void testRequestFile() {  // 파일 요청 메소드

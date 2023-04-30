@@ -1,6 +1,7 @@
 import java.awt.*;
 import java.io.*;
 import java.awt.event.*;
+import java.nio.file.Path;
 import java.util.*;
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
@@ -111,6 +112,9 @@ public class CMServerWinApp extends JFrame {
                 break;
             case 22: // 파일 전송
                 pushFile();
+                break;
+            case 70: // 파일 동기화 폴더 열기
+                openFileSyncFolder();
                 break;
             default:
                 printStyledMessage("알 수 없는 번호입니다.\n", "bold");
@@ -266,6 +270,8 @@ public class CMServerWinApp extends JFrame {
         printMessage("10: 간단한 메시지 보내기\n");
         printMessage("---------------------------------- 파일 전송\n");
         printMessage("21: 파일 요청, 22: 파일 전송\n");
+        printMessage("---------------------------------- 파일 동기화\n");
+        printMessage("70: 동기화 폴더 열기\n");
     }
 
     public void displayLoginUsers() {  // 현재 접속 중인 사용자를 표시하는 메소드
@@ -432,6 +438,25 @@ public class CMServerWinApp extends JFrame {
         }
 
         printMessage("======\n");
+    }
+
+    private void openFileSyncFolder() {  // 파일 동기화 폴더 열기 메소드
+        printMessage("=========== 파일 동기화 폴더 열기\n");
+        String userName = JOptionPane.showInputDialog("사용자 이름:");  // 클라이언트 이름 묻기
+        if(userName != null) {
+            Path syncHome = m_serverStub.getFileSyncHome(userName);  // 사용자의 동기화 폴더 가져오기
+            if(syncHome == null) {  // 파일 동기화 폴더가 없을 경우
+                printStyledMessage("파일 동기화 폴더가 없습니다.\n", "bold");
+                printStyledMessage("더 자세한 정보는 콘솔 창의 에러 메시지를 참조하세요.\n", "bold");
+                return;
+            }
+            Desktop desktop = Desktop.getDesktop();
+            try {
+                desktop.open(syncHome.toFile());  // 파일 동기화 폴더 열기
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public void terminateCM() {  // 서버 종료 메소드

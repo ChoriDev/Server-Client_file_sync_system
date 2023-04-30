@@ -5,6 +5,10 @@ import kr.ac.konkuk.ccslab.cm.event.CMDummyEvent;
 import kr.ac.konkuk.ccslab.cm.event.CMEvent;
 import kr.ac.konkuk.ccslab.cm.event.CMFileEvent;
 import kr.ac.konkuk.ccslab.cm.event.CMSessionEvent;
+import kr.ac.konkuk.ccslab.cm.event.filesync.CMFileSyncEvent;
+import kr.ac.konkuk.ccslab.cm.event.filesync.CMFileSyncEventCompleteNewFile;
+import kr.ac.konkuk.ccslab.cm.event.filesync.CMFileSyncEventCompleteUpdateFile;
+import kr.ac.konkuk.ccslab.cm.event.filesync.CMFileSyncEventSkipUpdateFile;
 import kr.ac.konkuk.ccslab.cm.event.handler.CMAppEventHandler;
 import kr.ac.konkuk.ccslab.cm.info.CMConfigurationInfo;
 import kr.ac.konkuk.ccslab.cm.info.CMInfo;
@@ -20,6 +24,7 @@ public class CMClientWinEventHandler implements CMAppEventHandler {
     private int m_nRecvPieceNum;  // 분산 파일에 사용할 변수
     private String m_strExt;  // 분산 파일에 사용할 변수
     private long m_lStartTime;  // 분산 파일에 사용할 변수
+    private long startTimeOfFileSync;  //  파일 동기화에 사용할 변수
 
     public CMClientWinEventHandler(CMClientStub clientStub, CMClientWinApp client) {  // CMClientWinEventHandler 생성자
         // 변수 초기화
@@ -31,10 +36,15 @@ public class CMClientWinEventHandler implements CMAppEventHandler {
         m_bDistFileProc = false;
         m_strExt = null;
         m_filePieces = null;
+
+        startTimeOfFileSync = 0;
     }
 
     public void setStartTime(long time) {  // 시작 시간 설정 메소드
         m_lStartTime = time;
+    }
+    public void setStartTimeOfFileSync(long startTimeOfFileSync) {
+        this.startTimeOfFileSync = startTimeOfFileSync;
     }
 
     @Override
@@ -51,6 +61,38 @@ public class CMClientWinEventHandler implements CMAppEventHandler {
                 break;
             case CMInfo.CM_FILE_EVENT:  // 파일 이벤트의 경우
                 processFileEvent(cme);  // 파일 이벤트 메소드
+                break;
+            case CMInfo.CM_FILE_SYNC_EVENT:  // 파일 동기화 이벤트의 경우
+                processFileSyncEvent(cme);  // 파일 동기화 이벤트 메소드 실행
+                break;
+            default:
+                return;
+        }
+    }
+
+    private void processFileSyncEvent(CMEvent cme) {
+        CMFileSyncEvent fse = (CMFileSyncEvent) cme;
+        switch(fse.getID())
+        {
+            case CMFileSyncEvent.COMPLETE_NEW_FILE:
+                CMFileSyncEventCompleteNewFile newFileEvent = (CMFileSyncEventCompleteNewFile) fse;
+                printMessage("새로운 파일 업로드: " + newFileEvent.getCompletedPath() + "\n");
+                break;
+            case CMFileSyncEvent.COMPLETE_UPDATE_FILE:
+                CMFileSyncEventCompleteUpdateFile updateFileEvent = (CMFileSyncEventCompleteUpdateFile) fse;
+                printMessage("파일 업데이트: " + updateFileEvent.getCompletedPath() + "\n");
+                break;
+            case CMFileSyncEvent.SKIP_UPDATE_FILE:
+                CMFileSyncEventSkipUpdateFile skipFileEvent = (CMFileSyncEventSkipUpdateFile) fse;
+                printMessage("파일 스킵: " + skipFileEvent.getSkippedPath() + "\n");
+                break;
+            case CMFileSyncEvent.COMPLETE_FILE_SYNC:
+                printMessage("파일 동기화 완료.\n");
+                if(startTimeOfFileSync > 0) {
+                    long elapsedTime = System.currentTimeMillis() - startTimeOfFileSync;
+                    printMessage("파일 동기화 지연 시간: "+elapsedTime+" ms.\n");
+                    startTimeOfFileSync = 0;
+                }
                 break;
             default:
                 return;
