@@ -64,7 +64,7 @@ public class CMServerWinApp extends JFrame {
 
         m_startStopButton = new JButton("서버 시작");  // 서버 작동 버튼 생성
         m_startStopButton.addActionListener(cmActionListener);  // 버튼에 액션 리스너 부착
-        m_startStopButton.setEnabled(true);  // 버튼 활성화
+        m_startStopButton.setEnabled(false);  // 버튼 비활성화로 시작
         topButtonPanel.add(m_startStopButton);  // 버튼을 담을 패널에 버튼 추가
 
         setVisible(true);  // 프레임 출력
@@ -255,6 +255,7 @@ public class CMServerWinApp extends JFrame {
         if(ret) {  // 정상적으로 서버 시작이 된 경우
             printStyledMessage("서버 시작\n", "bold");
             printMessage("메뉴를 보려면 \"0\"을 입력하세요.\n");
+            m_startStopButton.setEnabled(true);  // 버튼 활성화
             m_startStopButton.setText("서버 종료");  // 서버 종료로 버튼 바꾸기
         } else {  // 정상적으로 서버 시작이 안된 경우 에러 발생
             printMessage("서버 초기화 오류.\n");

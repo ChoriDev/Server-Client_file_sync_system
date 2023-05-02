@@ -68,12 +68,12 @@ public class CMClientWinApp extends JFrame{
 
         m_startStopButton = new JButton("클라이언트 시작");  // 클라이언트 작동 버튼 생성
         m_startStopButton.addActionListener(cmActionListener);  // 버튼에 액션 리스너 부착
-        m_startStopButton.setEnabled(true);  // 버튼 활성화
+        m_startStopButton.setEnabled(false);  // 버튼 비활성화로 시작
         topButtonPanel.add(m_startStopButton);  // 버튼을 담을 패널에 버튼 추가
 
         m_loginLogoutButton = new JButton("로그인");  // 로그인 버튼 생성
         m_loginLogoutButton.addActionListener(cmActionListener);  // 버튼에 액션 리스너 부착
-        m_loginLogoutButton.setEnabled(true);  // 버튼 활성화
+        m_loginLogoutButton.setEnabled(false);  // 버튼 비활성화로 시작
         topButtonPanel.add(m_loginLogoutButton);  // 버튼을 담을 패널에 버튼 추가
 
         setVisible(true);  // 프레임 출력
@@ -299,6 +299,9 @@ public class CMClientWinApp extends JFrame{
             case 302:  // 파일 동기화 폴더 열기
                 testOpenFileSyncFolder();
                 break;
+            case 308:	// 현재 파일 동기화 모드 출력
+                testPrintCurrentFileSyncMode();
+                break;
             default:
                 printMessage("없는 번호입니다.");
                 break;
@@ -322,6 +325,7 @@ public class CMClientWinApp extends JFrame{
         printMessage("---------------------------------- 파일 동기화\n");
         printMessage("300: 수동 모드로 파일 동기화 시작, 301: 파일 동기화 정지\n");
         printMessage("302: 파일 동기화 폴더 열기\n");
+        printMessage("308: 현재 파일 동기화 모드 출력\n");
     }
 
     private void testStartCM() {  // 클라이언트 시작 메소드
@@ -329,6 +333,8 @@ public class CMClientWinApp extends JFrame{
         if(!bRet) {  // 정상적으로 클라이언트 시작이 안될 시 에러 발생
             printStyledMessage("CM 초기화 오류.\n", "bold");
         } else {  // 정상적으로 클라이언트 시작 시
+            m_startStopButton.setEnabled(true);  // 버튼 활성화
+            m_loginLogoutButton.setEnabled(true);  // 버튼 활성화
             printStyledMessage("클라이언트 시작\n", "bold");
             printStyledMessage("메뉴를 보려면 \"0\"을 입력하세요.\n", "regular");
             setButtonsAccordingToClientState();  // 클라이언트 상태에 맞게 버튼 설정
@@ -650,6 +656,17 @@ public class CMClientWinApp extends JFrame{
         else {
             printMessage("파일 동기화 정지.\n");
         }
+    }
+
+    private void testPrintCurrentFileSyncMode() {
+        printMessage("========== 현재 파일 동기화 모드 출력\n");
+        CMFileSyncMode currentMode = m_clientStub.getCurrentFileSyncMode();
+        if(currentMode == null) {
+            printStyledMessage("에러 발생! 더 많은 정보를 확인하기 위해서는 콘솔의 에러 메시지를 확인하세요.\n",
+                    "bold");
+            return;
+        }
+        printMessage("현재 파일 동기화 모드: "+currentMode+".\n");
     }
 
     public void testTerminateCM() {  // 클라이언트 종료 메소드
