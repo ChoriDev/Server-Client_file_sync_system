@@ -10,6 +10,7 @@ import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 
 import javax.swing.*;
 import java.io.*;
+import java.lang.management.ManagementFactory;
 
 public class CMServerWinEventHandler implements CMAppEventHandler {
     private CMServerWinApp m_server;  // CMServerWinapp 타입 레퍼런스 변수 m_server 선언
@@ -25,6 +26,7 @@ public class CMServerWinEventHandler implements CMAppEventHandler {
 
     @Override
     public void processEvent(CMEvent cme) {  // event를 받는 processEvent 메소드 오버라이드
+        m_server.clock.increment(Long.valueOf(m_server.pId).intValue());
         switch(cme.getType()) {
             case CMInfo.CM_SESSION_EVENT:  // 로그인 이벤트의 경우
                 processSessionEvent(cme);  // 로그인 이벤트 메소드 실행

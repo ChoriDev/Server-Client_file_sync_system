@@ -1,6 +1,9 @@
 import java.awt.*;
 import java.io.*;
 import java.awt.event.*;
+import java.lang.management.ManagementFactory;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.nio.file.Path;
 import java.util.*;
 import javax.swing.*;
@@ -25,6 +28,8 @@ public class CMServerWinApp extends JFrame {
     private JTextPane m_outTextPane;  // Gui에 사용할 변수, 메시지를 출력할 패널
     private JTextField m_inTextField;  // Gui에 사용할 변수, 입력을 할 수 있는 텍스트 상자
     private JButton m_startStopButton;  // Gui에 사용할 변수, 서버 시작과 종료를 할 수 있는 버튼
+    long pId = ManagementFactory.getRuntimeMXBean().getPid();
+    VectorClock clock = new VectorClock(100000000);
 
     public CMServerWinApp() {  // CMServerApp 생성자
         CMServerWinApp.MyKeyListener cmKeyListener = new MyKeyListener();  // 키 이벤트 리스너 객체 생성
@@ -86,38 +91,44 @@ public class CMServerWinApp extends JFrame {
     }
 
     public void processInput(String strInput) {  // 입력한 값에 따라 각각의 기능을 호출하는 메소드
-        int nCommand = -1;  // 입력한 값
-        try {  // 입력한 값을 정수로 변환
-            nCommand = Integer.parseInt(strInput);
-        } catch (NumberFormatException e) {  // 기능을 수행할 수 있는 입력이 아닌 경우 에러 처리
-            printMessage("잘못된 입력입니다!\n");
-            return;
-        }
+//        int nCommand = -1;  // 입력한 값
+//        try {  // 입력한 값을 정수로 변환
+//            nCommand = Integer.parseInt(strInput);
+//        } catch (NumberFormatException e) {  // 기능을 수행할 수 있는 입력이 아닌 경우 에러 처리
+//            printMessage("잘못된 입력입니다!\n");
+//            return;
+//        }
 
-        switch(nCommand) {
-            case 0:  // 사용 가능한 모든 기능 표시
+        switch(strInput) {
+            case "모든 기능 표시":  // 사용 가능한 모든 기능 표시
                 printAllMenus();
                 break;
-            case 100: // 서버 시작
+            case "서버 시작": // 서버 시작
                 startCM();
                 break;
-            case 999:  // 서버 종료
+            case "서버 종료":  // 서버 종료
                 terminateCM();
                 return;
-            case 10:	// 간단한 메시지 보내기
+            case "메시지 보내기":	// 간단한 메시지 보내기
                 sendCMDummyEvent();
                 break;
-            case 21: // 파일 요청
+            case "파일 요청": // 파일 요청
                 requestFile();
                 break;
-            case 22: // 파일 전송
+            case "파일 전송": // 파일 전송
                 pushFile();
                 break;
-            case 70: // 파일 동기화 폴더 열기
-                openFileSyncFolder();
+            case "소켓 통신":  // 소켓 통신
+                socketCommunication();
+                break;
+//            case 70: // 파일 동기화 폴더 열기
+//                openFileSyncFolder();
+//                break;
+            case "시간 확인":  // Logical Clock 확인
+                getClockTime();
                 break;
             default:
-                printStyledMessage("알 수 없는 번호입니다.\n", "bold");
+                printStyledMessage("없는 기능입니다.\n", "bold");
                 break;
         }
     }
@@ -254,7 +265,8 @@ public class CMServerWinApp extends JFrame {
         boolean ret = m_serverStub.startCM();  // 시작 여부
         if(ret) {  // 정상적으로 서버 시작이 된 경우
             printStyledMessage("서버 시작\n", "bold");
-            printMessage("메뉴를 보려면 \"0\"을 입력하세요.\n");
+            printStyledMessage("사용할 기능을 입력하세요.\n", "bold");
+            printAllMenus();
             m_startStopButton.setEnabled(true);  // 버튼 활성화
             m_startStopButton.setText("서버 종료");  // 서버 종료로 버튼 바꾸기
         } else {  // 정상적으로 서버 시작이 안된 경우 에러 발생
@@ -265,14 +277,17 @@ public class CMServerWinApp extends JFrame {
 
     public void printAllMenus() {  // 사용할 수 있는 기능과 입력할 값 안내
         printMessage("---------------------------------- 도움말\n");
-        printMessage("0: 모든 메뉴 표시\n");
+        printMessage("모든 기능 표시\n");
         printMessage("---------------------------------- 시작/종료\n");
-        printMessage("100: CM 시작, 999: CM 종료\n");
-        printMessage("10: 간단한 메시지 보내기\n");
+        printMessage("서버 시작, 서버 종료\n");
+        printMessage("메시지 보내기\n");
         printMessage("---------------------------------- 파일 전송\n");
-        printMessage("21: 파일 요청, 22: 파일 전송\n");
-        printMessage("---------------------------------- 파일 동기화\n");
-        printMessage("70: 동기화 폴더 열기\n");
+        printMessage("파일 요청, 파일 전송\n");
+        printMessage("소켓 통신\n");
+//        printMessage("---------------------------------- 파일 동기화\n");
+//        printMessage("70: 동기화 폴더 열기\n");
+        printMessage("---------------------------------- 프로세스\n");
+        printMessage("시간 확인\n");
     }
 
     public void displayLoginUsers() {  // 현재 접속 중인 사용자를 표시하는 메소드
@@ -441,21 +456,64 @@ public class CMServerWinApp extends JFrame {
         printMessage("======\n");
     }
 
-    private void openFileSyncFolder() {  // 파일 동기화 폴더 열기 메소드
-        printMessage("=========== 파일 동기화 폴더 열기\n");
-        String userName = JOptionPane.showInputDialog("사용자 이름:");  // 클라이언트 이름 묻기
-        if(userName != null) {
-            Path syncHome = m_serverStub.getFileSyncHome(userName);  // 사용자의 동기화 폴더 가져오기
-            if(syncHome == null) {  // 파일 동기화 폴더가 없을 경우
-                printStyledMessage("파일 동기화 폴더가 없습니다.\n", "bold");
-                printStyledMessage("더 자세한 정보는 콘솔 창의 에러 메시지를 참조하세요.\n", "bold");
-                return;
+//    private void openFileSyncFolder() {  // 파일 동기화 폴더 열기 메소드
+//        printMessage("=========== 파일 동기화 폴더 열기\n");
+//        String userName = JOptionPane.showInputDialog("사용자 이름:");  // 클라이언트 이름 묻기
+//        if(userName != null) {
+//            Path syncHome = m_serverStub.getFileSyncHome(userName);  // 사용자의 동기화 폴더 가져오기
+//            if(syncHome == null) {  // 파일 동기화 폴더가 없을 경우
+//                printStyledMessage("파일 동기화 폴더가 없습니다.\n", "bold");
+//                printStyledMessage("더 자세한 정보는 콘솔 창의 에러 메시지를 참조하세요.\n", "bold");
+//                return;
+//            }
+//            Desktop desktop = Desktop.getDesktop();
+//            try {
+//                desktop.open(syncHome.toFile());  // 파일 동기화 폴더 열기
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//    }
+
+    private void getClockTime() {
+        int time = clock.getTime(Long.valueOf(pId).intValue());
+        printMessage("현재 시간: " + time + "\n");
+    }
+
+    public void socketCommunication() {
+        BufferedReader in = null;
+        BufferedWriter out = null;
+        ServerSocket listener = null;
+        Socket socket = null;
+        Scanner scanner = new Scanner(System.in);  // 키보드에서 읽을 scanner 객체 생성
+        try {
+            listener = new ServerSocket(9999); // 서버 소켓 생성
+            System.out.println("연결을 기다리고 있습니다.....");
+            socket = listener.accept(); // 클라이언트로부터 연결 요청 대기
+            System.out.println("연결되었습니다.");
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            while(true) {
+                String inputMessage = in.readLine(); // 클라이언트로부터 한 행 읽기
+                if(inputMessage.equalsIgnoreCase("bye")) {
+                    System.out.println("클라이언트에서 bye로 연결을 종료하였음");
+                    break;
+                }
+                System.out.println("클라이언트: " + inputMessage);
+                System.out.print("보내기>>"); // 프롬프트
+                String outputMessage = scanner.nextLine(); // 키보드에서 한 행 읽기
+                out.write(outputMessage + "\n"); // 키보드에서 읽은 문자열 전송
+                out.flush();
             }
-            Desktop desktop = Desktop.getDesktop();
+        } catch(IOException e) {
+            System.out.println(e.getMessage());
+        } finally {
             try {
-                desktop.open(syncHome.toFile());  // 파일 동기화 폴더 열기
+                scanner.close();
+                socket.close();
+                listener.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                System.out.println("클라이언트와 채팅 중 오류가 발생했습니다.");
             }
         }
     }

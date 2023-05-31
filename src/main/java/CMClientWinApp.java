@@ -1,11 +1,11 @@
 import java.awt.*;
 import java.awt.event.*;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.lang.management.ManagementFactory;
+import java.net.Socket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Scanner;
 import javax.swing.*;
 import javax.swing.text.*;
 import kr.ac.konkuk.ccslab.cm.entity.CMMember;
@@ -25,6 +25,8 @@ public class CMClientWinApp extends JFrame{
     private JTextField m_inTextField;  // Gui에 사용할 변수, 입력을 할 수 있는 텍스트 상자
     private JButton m_startStopButton;  // Gui에 사용할 변수, 클라이언트 시작과 종료를 할 수 있는 버튼
     private JButton m_loginLogoutButton;  // Gui에 사용할 변수, 로그인과 로그아웃을 할 수 있는 버튼
+    long pId = ManagementFactory.getRuntimeMXBean().getPid();
+    VectorClock clock = new VectorClock(100000000);
 
     public CMClientWinApp() {  // CMClientApp 생성자
         // GUI 관련 설정
@@ -248,84 +250,93 @@ public class CMClientWinApp extends JFrame{
     }
 
     private void processInput(String strInput) { // 입력한 값에 따라 각각의 기능을 호출하는 메소드
-        int nCommand = -1;  // 입력한 값
-        try {
-            nCommand = Integer.parseInt(strInput);  // 입력한 값을 정수로 변환
-        } catch (NumberFormatException e) {  // 기능을 수행할 수 있는 입력이 아닌 경우 에러 처리
-            printMessage("알 수 없는 번호입니다.\n");
-            return;
-        }
+//        int nCommand = -1;  // 입력한 값
+//        try {
+//            nCommand = Integer.parseInt(strInput);  // 입력한 값을 정수로 변환
+//        } catch (NumberFormatException e) {  // 기능을 수행할 수 있는 입력이 아닌 경우 에러 처리
+//            printMessage("알 수 없는 번호입니다.\n");
+//            return;
+//        }
 
-        switch (nCommand) {  // 입력한 값에 따라 아래의 기능을 호출
-            case 0:  // 사용 가능한 모든 기능 표시
+        switch (strInput) {  // 입력한 값에 따라 아래의 기능을 호출
+            case "모든 기능 표시":  // 사용 가능한 모든 기능 표시
                 printAllMenus();
                 break;
-            case 100:  // 클라이언트 시작
+            case "클라이언트 시작":  // 클라이언트 시작
                 testStartCM();
                 break;
-            case 999:  // 클라이언트 종료
+            case "클라이언트 종료":  // 클라이언트 종료
                 testTerminateCM();
                 break;
-            case 1: // 기본 서버에 접속
+            case "서버 접속": // 기본 서버에 접속
                 testConnectionDS();
                 break;
-            case 2:  // 기본 서버에 접속 해제
+            case "서버 접속 해제":  // 기본 서버에 접속 해제
                 testDisconnectionDS();
                 break;
-            case 11:  // 기본 서버에 동기식으로 로그인
+            case "로그인":  // 기본 서버에 동기식으로 로그인
                 testSyncLoginDS();
                 break;
-            case 12:  // 기본 서버에 로그아웃
+            case "로그아웃":  // 기본 서버에 로그아웃
                 testLogoutDS();
                 break;
-            case 42:  // 간단한 메시지 보내기
+            case "메시지 보내기":  // 간단한 메시지 보내기
                 testDummyEvent();
                 break;
-            case 70:  // 파일 경로 변경
+            case "파일 경로 변경":  // 파일 경로 변경
                 testSetFilePath();
                 break;
-            case 71:  // 파일 요청
+            case "파일 요청":  // 파일 요청
                 testRequestFile();
                 break;
-            case 72:  // 파일 전송
+            case "파일 전송":  // 파일 전송
                 testPushFile();
                 break;
-            case 300:  // 수동 모드로 파일 동기화 시작
-                testStartFileSyncWithManualMode();
+            case "소켓 통신":  // 소켓 통신
+                socketCommunication();
                 break;
-            case 301:  //  파일 동기화 정지
-                testStopFileSync();
+            case "시간 확인":  // Logical time 알림
+                getClockTime();
                 break;
-            case 302:  // 파일 동기화 폴더 열기
-                testOpenFileSyncFolder();
-                break;
-            case 308:	// 현재 파일 동기화 모드 출력
-                testPrintCurrentFileSyncMode();
-                break;
+//            case 300:  // 수동 모드로 파일 동기화 시작
+//                testStartFileSyncWithManualMode();
+//                break;
+//            case 301:  //  파일 동기화 정지
+//                testStopFileSync();
+//                break;
+//            case 302:  // 파일 동기화 폴더 열기
+//                testOpenFileSyncFolder();
+//                break;
+//            case 308:	// 현재 파일 동기화 모드 출력
+//                testPrintCurrentFileSyncMode();
+//                break;
             default:
-                printMessage("없는 번호입니다.");
+                printMessage("없는 기능입니다.\n");
                 break;
         }
     }
 
     private void printAllMenus() {  // 사용할 수 있는 기능과 입력할 값 안내
+        printMessage("사용할 수 있는 기능\n");
         printMessage("---------------------------------- 도움말\n");
-        printMessage("0: 모든 메뉴 보기\n");
+        printMessage("모든 기능 표시\n");
         printMessage("---------------------------------- 시작/종료\n");
-        printMessage("100: CM 시작, 999: CM 종료\n");
-        printMessage("---------------------------------- 연결\n");
-        printMessage("1: 기본 서버에 접속, 2: 기본 서버에 접속 해제\n");
+        printMessage("클라이언트 시작, 클라이언트 종료\n");
+        printMessage("---------------------------------- 서버 연결\n");
+        printMessage("서버 접속, 서버 접속 해제\n");
         printMessage("---------------------------------- 로그인\n");
-        printMessage("11: 기본 서버에 동기식으로 로그인\n");
-        printMessage("12: 기본 서버에 로그아웃\n");
-        printMessage("---------------------------------- Event 전송\n");
-        printMessage("42: 간단한 메시지 보내기\n");
+        printMessage("로그인, 로그아웃\n");
+        printMessage("---------------------------------- 메시지 전송\n");
+        printMessage("메시지 보내기\n");
         printMessage("---------------------------------- 파일 전송\n");
-        printMessage("70: 파일 경로 설정, 71: 파일 요청, 72: 파일 전송\n");
-        printMessage("---------------------------------- 파일 동기화\n");
-        printMessage("300: 수동 모드로 파일 동기화 시작, 301: 파일 동기화 정지\n");
-        printMessage("302: 파일 동기화 폴더 열기\n");
-        printMessage("308: 현재 파일 동기화 모드 출력\n");
+        printMessage("파일 경로 설정, 파일 요청, 파일 전송\n");
+//        printMessage("73: 소켓 통신\n");
+//        printMessage("---------------------------------- 파일 동기화\n");
+//        printMessage("300: 수동 모드로 파일 동기화 시작, 301: 파일 동기화 정지\n");
+//        printMessage("302: 파일 동기화 폴더 열기\n");
+//        printMessage("308: 현재 파일 동기화 모드 출력\n");
+        printMessage("---------------------------------- 프로세스\n");
+        printMessage("시간 확인\n");
     }
 
     private void testStartCM() {  // 클라이언트 시작 메소드
@@ -336,7 +347,8 @@ public class CMClientWinApp extends JFrame{
             m_startStopButton.setEnabled(true);  // 버튼 활성화
             m_loginLogoutButton.setEnabled(true);  // 버튼 활성화
             printStyledMessage("클라이언트 시작\n", "bold");
-            printStyledMessage("메뉴를 보려면 \"0\"을 입력하세요.\n", "regular");
+            printStyledMessage("사용할 기능을 입력하세요.\n", "bold");
+            printAllMenus();
             setButtonsAccordingToClientState();  // 클라이언트 상태에 맞게 버튼 설정
         }
     }
@@ -614,59 +626,98 @@ public class CMClientWinApp extends JFrame{
         printMessage("======\n");
     }
 
-    private void testOpenFileSyncFolder() {  // 파일 동기화 폴더 열기 메소드
-        printMessage("========== 파일 동기화 폴더 열기\n");
+//    private void testOpenFileSyncFolder() {  // 파일 동기화 폴더 열기 메소드
+//        printMessage("========== 파일 동기화 폴더 열기\n");
+//
+//        Path syncHome = m_clientStub.getFileSyncHome();  // 파일 동기화 폴더 가져오기
+//        if(syncHome == null) {  // 파일 동기화 폴더가 없을 경우
+//            printStyledMessage("파일 동기화 폴더가 없습니다.\n", "bold");
+//            printStyledMessage("더 자세한 정보는 콘솔 창의 에러 메시지를 참조하세요.\n", "bold");
+//            return;
+//        }
 
-        Path syncHome = m_clientStub.getFileSyncHome();  // 파일 동기화 폴더 가져오기
-        if(syncHome == null) {  // 파일 동기화 폴더가 없을 경우
-            printStyledMessage("파일 동기화 폴더가 없습니다.\n", "bold");
-            printStyledMessage("더 자세한 정보는 콘솔 창의 에러 메시지를 참조하세요.\n", "bold");
-            return;
-        }
+//        Desktop desktop = Desktop.getDesktop();
+//        try {
+//            desktop.open(syncHome.toFile());  // 파일 동기화 폴더 열기
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
 
-        Desktop desktop = Desktop.getDesktop();
+//    private void testStartFileSyncWithManualMode() {
+//        printMessage("========== 수동 모드로 파일 동기화를 시작합니다.\n");
+//
+//        m_eventHandler.setStartTimeOfFileSync(System.currentTimeMillis());
+//
+//        boolean ret = m_clientStub.startFileSync(CMFileSyncMode.MANUAL);
+//        if(!ret) {
+//            printStyledMessage("수동 모드로 파일 동기화를 시작하는데 에러가 발생했습니다.\n", "bold");
+//            m_eventHandler.setStartTimeOfFileSync(0);
+//        }
+//        else {
+//            printMessage("수동 모드로 파일 동기화 시작.\n");
+//        }
+//    }
+
+//    private void testStopFileSync() {
+//        printMessage("========== 파일 동기화를 정지합니다.\n");
+//        boolean ret = m_clientStub.stopFileSync();
+//        if(!ret) {
+//            printStyledMessage("파일 동기화 정지 에러.\n", "bold");
+//        }
+//        else {
+//            printMessage("파일 동기화 정지.\n");
+//        }
+//    }
+
+//    private void testPrintCurrentFileSyncMode() {
+//        printMessage("========== 현재 파일 동기화 모드 출력\n");
+//        CMFileSyncMode currentMode = m_clientStub.getCurrentFileSyncMode();
+//        if(currentMode == null) {
+//            printStyledMessage("에러 발생! 더 많은 정보를 확인하기 위해서는 콘솔의 에러 메시지를 확인하세요.\n",
+//                    "bold");
+//            return;
+//        }
+//        printMessage("현재 파일 동기화 모드: "+currentMode+".\n");
+//    }
+
+    private void getClockTime() {
+        int time = clock.getTime(Long.valueOf(pId).intValue());
+        printMessage("현재 시간: " + time + "\n");
+    }
+
+    private void socketCommunication() {
+        BufferedReader in = null;
+        BufferedWriter out = null;
+        Socket socket = null;
+        Scanner scanner = new Scanner(System.in);
         try {
-            desktop.open(syncHome.toFile());  // 파일 동기화 폴더 열기
-        } catch (IOException e) {
-            e.printStackTrace();
+            socket = new Socket("localhost", 9999);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            while(true) {
+                System.out.print("보내기>>");
+                String outputMessage = scanner.nextLine();
+                if(outputMessage.equalsIgnoreCase("bye")) {
+                    out.write(outputMessage + "\n");
+                    out.flush();
+                    break;
+                }
+                out.write(outputMessage + "\n");
+                out.flush();
+                String inputMessage = in.readLine();
+                System.out.println("서버: " + inputMessage);
+            }
+        } catch(IOException e) {
+            System.out.println(e.getMessage());
+        } finally {
+            try {
+                scanner.close();
+                if(socket != null) socket.close();
+            } catch(IOException e) {
+                System.out.println("서버와의 채팅 중 오류가 발생했습니다.");
+            }
         }
-    }
-
-    private void testStartFileSyncWithManualMode() {
-        printMessage("========== 수동 모드로 파일 동기화를 시작합니다.\n");
-
-        m_eventHandler.setStartTimeOfFileSync(System.currentTimeMillis());
-
-        boolean ret = m_clientStub.startFileSync(CMFileSyncMode.MANUAL);
-        if(!ret) {
-            printStyledMessage("수동 모드로 파일 동기화를 시작하는데 에러가 발생했습니다.\n", "bold");
-            m_eventHandler.setStartTimeOfFileSync(0);
-        }
-        else {
-            printMessage("수동 모드로 파일 동기화 시작.\n");
-        }
-    }
-
-    private void testStopFileSync() {
-        printMessage("========== 파일 동기화를 정지합니다.\n");
-        boolean ret = m_clientStub.stopFileSync();
-        if(!ret) {
-            printStyledMessage("파일 동기화 정지 에러.\n", "bold");
-        }
-        else {
-            printMessage("파일 동기화 정지.\n");
-        }
-    }
-
-    private void testPrintCurrentFileSyncMode() {
-        printMessage("========== 현재 파일 동기화 모드 출력\n");
-        CMFileSyncMode currentMode = m_clientStub.getCurrentFileSyncMode();
-        if(currentMode == null) {
-            printStyledMessage("에러 발생! 더 많은 정보를 확인하기 위해서는 콘솔의 에러 메시지를 확인하세요.\n",
-                    "bold");
-            return;
-        }
-        printMessage("현재 파일 동기화 모드: "+currentMode+".\n");
     }
 
     public void testTerminateCM() {  // 클라이언트 종료 메소드

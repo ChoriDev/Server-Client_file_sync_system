@@ -1,5 +1,7 @@
 import javax.swing.JOptionPane;
 import java.io.*;
+import java.lang.management.ManagementFactory;
+
 import kr.ac.konkuk.ccslab.cm.event.CMDataEvent;
 import kr.ac.konkuk.ccslab.cm.event.CMDummyEvent;
 import kr.ac.konkuk.ccslab.cm.event.CMEvent;
@@ -49,6 +51,7 @@ public class CMClientWinEventHandler implements CMAppEventHandler {
 
     @Override
     public void processEvent(CMEvent cme) {  // event를 받는 processEvent 메소드 오버라이드
+        m_client.clock.increment(Long.valueOf(m_client.pId).intValue());
         switch(cme.getType()) {
             case CMInfo.CM_SESSION_EVENT:  // 로그인 이벤트의 경우
                 processSessionEvent(cme);  // 로그인 이벤트 메소드 실행
