@@ -10,23 +10,23 @@ import kr.ac.konkuk.ccslab.cm.stub.CMServerStub;
 
 import javax.swing.*;
 import java.io.*;
-import java.lang.management.ManagementFactory;
 
 public class CMServerWinEventHandler implements CMAppEventHandler {
     private CMServerWinApp m_server;  // CMServerWinapp 타입 레퍼런스 변수 m_server 선언
     private CMServerStub m_serverStub;  // CMServerSTub 타입 레퍼런스 변수 m_clientStub 선언
     private boolean m_bDistFileProc;	// 분산 파일에 사용할 변수
+    boolean m_conflict;  // 시간에 따라 충돌 여부 결정
 
     public CMServerWinEventHandler(CMServerStub serverStub, CMServerWinApp server) {  // CMServerWinEventHandler 생성자
         // 변수 초기화
         m_server = server;
         m_serverStub = serverStub;
         m_bDistFileProc = false;
+        m_conflict = false;
     }
 
     @Override
     public void processEvent(CMEvent cme) {  // event를 받는 processEvent 메소드 오버라이드
-        m_server.clock.increment(Long.valueOf(m_server.pId).intValue());
         switch(cme.getType()) {
             case CMInfo.CM_SESSION_EVENT:  // 로그인 이벤트의 경우
                 processSessionEvent(cme);  // 로그인 이벤트 메소드 실행
@@ -66,12 +66,25 @@ public class CMServerWinEventHandler implements CMAppEventHandler {
 
     private void processDummyEvent(CMEvent cme) {  // 메시지 전송 관련 메소드
         CMDummyEvent due = (CMDummyEvent) cme;
-        printMessage("세션(" + due.getHandlerSession() + "), 그룹(" + due.getHandlerGroup() + "), 송신자(" + due.getSender() + ")가 메시지를 보냈습니다.\n");
-        printMessage("메시지: " + due.getDummyInfo() + "\n");
+//        printMessage("세션(" + due.getHandlerSession() + "), 그룹(" + due.getHandlerGroup() + "), 송신자(" + due.getSender() + ")가 메시지를 보냈습니다.\n");
+//        printMessage("메시지: " + due.getDummyInfo() + "\n");
+
+        if(due.getDummyInfo().contains("삭제")) {  // 파일 삭제 메시지를 받은 경우
+            String[] array = due.getDummyInfo().split("-");
+            m_server.deleteFile(due.getSender(), array[1]);
+        }
+
+        if(due.getDummyInfo().contains("최종수신자")) {
+            String[] array = due.getDummyInfo().split("=");
+            String[] array2 = array[3].split("\\\\");
+            String pathTemp = "C:\\Users\\yido0\\IntelilJ-Workspace\\CMApp\\server-file-path" + "\\" + array2[6] + "\\" + array2[7];
+            m_server.pushFile(pathTemp, array[1]);
+        }
+
         return;
     }
 
-    private void processFileEvent(CMEvent cme) {  // 파일 전송 관련 메소드
+    public void processFileEvent(CMEvent cme) {  // 파일 전송 관련 메소드
         CMFileEvent fe = (CMFileEvent) cme;
         int nOption = -1;
         switch(fe.getID())
@@ -97,19 +110,25 @@ public class CMServerWinEventHandler implements CMAppEventHandler {
                 }
                 break;
             case CMFileEvent.REQUEST_PERMIT_PUSH_FILE:  // 파일 전송 요청을 받은 경우
-                StringBuffer strReqBuf = new StringBuffer();
-                strReqBuf.append("["+fe.getFileSender()+"] 송신자가 파일을 보내려 합니다.\n");
-                strReqBuf.append("파일 경로: "+fe.getFilePath()+"\n");
-                strReqBuf.append("파일 크기: "+fe.getFileSize()+"\n");
-                printMessage(strReqBuf.toString());
-                nOption = JOptionPane.showConfirmDialog(null, strReqBuf.toString(), "파일 전송", JOptionPane.YES_NO_OPTION);
-                if(nOption == JOptionPane.YES_OPTION) {  // 파일 전송 요청 허가
-                    m_serverStub.replyEvent(fe, 1);
-                }
-                else
-                {
+                if(m_conflict) {
                     m_serverStub.replyEvent(fe, 0);  // 파일 전송 요청 거부
+//                    m_server.sendCMDummyEvent("충돌 발생!!!", fe.getFileSender());
+                } else {
+                    m_serverStub.replyEvent(fe, 1);  // 파일 전송 요청 허가
                 }
+//                StringBuffer strReqBuf = new StringBuffer();
+//                strReqBuf.append("["+fe.getFileSender()+"] 송신자가 파일을 보내려 합니다.\n");
+//                strReqBuf.append("파일 경로: "+fe.getFilePath()+"\n");
+//                strReqBuf.append("파일 크기: "+fe.getFileSize()+"\n");
+//                printMessage(strReqBuf.toString());
+//                nOption = JOptionPane.showConfirmDialog(null, strReqBuf.toString(), "파일 전송", JOptionPane.YES_NO_OPTION);
+//                if(nOption == JOptionPane.YES_OPTION) {  // 파일 전송 요청 허가
+//                    m_serverStub.replyEvent(fe, 1);
+//                }
+//                else
+//                {
+//                    m_serverStub.replyEvent(fe, 0);  // 파일 전송 요청 거부
+//                }
                 break;
             case CMFileEvent.REPLY_PERMIT_PUSH_FILE:  // 파일 전송 요청 응답을 받는 경우
                 if(fe.getReturnCode() == 0) {  // 파일 수신을 거부한 경우
@@ -119,13 +138,14 @@ public class CMServerWinEventHandler implements CMAppEventHandler {
                 break;
             case CMFileEvent.START_FILE_TRANSFER:  // 파일 전송을 시작한 경우
             case CMFileEvent.START_FILE_TRANSFER_CHAN:
-                printMessage("["+fe.getFileSender()+"] 송신자가 파일을 보냅니다. ("+fe.getFileName()+").\n");
+//                printMessage("["+fe.getFileSender()+"] 송신자가 파일을 보냅니다. ("+fe.getFileName()+").\n");
                 break;
             case CMFileEvent.END_FILE_TRANSFER:  // 파일 전송이 끝난 경우
             case CMFileEvent.END_FILE_TRANSFER_CHAN:
-                printMessage("["+fe.getFileSender()+"] 송신자가 파일 전송을 완료했습니다. ("+fe.getFileName()+", " +fe.getFileSize()+" Bytes).\n");
+//                printMessage("["+fe.getFileSender()+"] 송신자가 파일 전송을 완료했습니다. ("+fe.getFileName()+", " +fe.getFileSize()+" Bytes).\n");
                 String strFile = fe.getFileName();
 
+                m_server.listUpDir();
                 m_server.sendCMDummyEvent("수신자가 파일 수신을 완료했습니다.", fe.getFileSender());
 
                 if(m_bDistFileProc)

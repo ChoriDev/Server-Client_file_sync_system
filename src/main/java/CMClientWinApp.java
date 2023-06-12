@@ -2,10 +2,9 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.lang.management.ManagementFactory;
-import java.net.Socket;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Scanner;
+import java.nio.file.*;
+import java.util.HashMap;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.text.*;
 import kr.ac.konkuk.ccslab.cm.entity.CMMember;
@@ -13,7 +12,6 @@ import kr.ac.konkuk.ccslab.cm.entity.CMUser;
 import kr.ac.konkuk.ccslab.cm.event.CMDummyEvent;
 import kr.ac.konkuk.ccslab.cm.event.CMSessionEvent;
 import kr.ac.konkuk.ccslab.cm.info.*;
-import kr.ac.konkuk.ccslab.cm.info.enums.CMFileSyncMode;
 import kr.ac.konkuk.ccslab.cm.stub.CMClientStub;
 
 public class CMClientWinApp extends JFrame{
@@ -22,18 +20,18 @@ public class CMClientWinApp extends JFrame{
     private JPanel m_pnlCenter;  // Gui에 사용할 변수, 출력 메시지 패널과 접속 중인 다른 사용자 표시 패널을 담음
     private JTextPane m_outTextPane;  // Gui에 사용할 변수, 메시지를 출력할 패널
     private JTextPane m_memberPane;  // Gui에 사용할 변수, 현재 접속 중인 사용자를 출력할 패널
+    private JTextPane m_dirPane;  // Gui에 사용할 변수, 현재 파일 목록을 출력할 패널
     private JTextField m_inTextField;  // Gui에 사용할 변수, 입력을 할 수 있는 텍스트 상자
     private JButton m_startStopButton;  // Gui에 사용할 변수, 클라이언트 시작과 종료를 할 수 있는 버튼
     private JButton m_loginLogoutButton;  // Gui에 사용할 변수, 로그인과 로그아웃을 할 수 있는 버튼
-    long pId = ManagementFactory.getRuntimeMXBean().getPid();
-    VectorClock clock = new VectorClock(100000000);
+    LogicalClock clock = new LogicalClock();
 
     public CMClientWinApp() {  // CMClientApp 생성자
         // GUI 관련 설정
         MyKeyListener cmKeyListener = new MyKeyListener();  // 키 이벤트 리스너 객체 생성
         MyActionListener cmActionListener = new MyActionListener();  // 액션 이벤트 리스너 객체 생성
         setTitle("CMClientWinApp");  // 프레임의 타이틀 설정
-        setSize(500, 500);  // 프레임 크기 설정
+        setSize(1000, 600);  // 프레임 크기 설정
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);  // 닫기 버튼을 클릭하면 프로그램 종료 설정
         setLayout(new BorderLayout());  // 프레임의 배치를 BorderLayout으로 설정
 
@@ -55,6 +53,11 @@ public class CMClientWinApp extends JFrame{
         JScrollPane leftScroll = new JScrollPane(m_memberPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
                 JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);  // 스크롤 패널 생성
         m_pnlCenter.add(leftScroll);  // pnlCenter 패널에 배치
+
+        m_dirPane = new JTextPane();  // 현재 파일 목록을 출력할 패널 생성
+        m_dirPane.setEditable(false);  // 패널 편집이 불가능하도록 설정
+        JScrollPane rightScroll = new JScrollPane(m_dirPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);  // 스크롤 패널 생성
+        m_pnlCenter.add(rightScroll);  // pnlCenter 패널에 배치
 
         StyledDocument doc2 = m_outTextPane.getStyledDocument();  // 스타일 가져오기
         addStylesToDocument(doc2);  // 스타일 적용
@@ -283,24 +286,24 @@ public class CMClientWinApp extends JFrame{
             case "메시지 보내기":  // 간단한 메시지 보내기
                 testDummyEvent();
                 break;
-            case "파일 경로 변경":  // 파일 경로 변경
-                testSetFilePath();
-                break;
+//            case "파일 경로 변경":  // 파일 경로 변경
+//                testSetFilePath();
+//                break;
             case "파일 요청":  // 파일 요청
                 testRequestFile();
                 break;
             case "파일 전송":  // 파일 전송
                 testPushFile();
                 break;
-            case "소켓 통신":  // 소켓 통신
-                socketCommunication();
+            case "클라이언트에게 파일 전송":  // 클라이언트에게 파일 전송
+                testPushFilebySycn();
                 break;
-            case "시간 확인":  // Logical time 알림
-                getClockTime();
+            case "파일 동기화":  // 수동으로 파일 동기화
+                testSyncFile();
                 break;
-//            case 300:  // 수동 모드로 파일 동기화 시작
-//                testStartFileSyncWithManualMode();
-//                break;
+            case "시간 확인":
+                noticeTime();
+                break;
 //            case 301:  //  파일 동기화 정지
 //                testStopFileSync();
 //                break;
@@ -329,9 +332,9 @@ public class CMClientWinApp extends JFrame{
         printMessage("---------------------------------- 메시지 전송\n");
         printMessage("메시지 보내기\n");
         printMessage("---------------------------------- 파일 전송\n");
-        printMessage("파일 경로 설정, 파일 요청, 파일 전송\n");
-//        printMessage("73: 소켓 통신\n");
-//        printMessage("---------------------------------- 파일 동기화\n");
+        printMessage("파일 경로 변경, 파일 요청, 파일 전송, 클라이언트에게 파일 전송\n");
+        printMessage("---------------------------------- 파일 동기화\n");
+        printMessage("파일 동기화\n");
 //        printMessage("300: 수동 모드로 파일 동기화 시작, 301: 파일 동기화 정지\n");
 //        printMessage("302: 파일 동기화 폴더 열기\n");
 //        printMessage("308: 현재 파일 동기화 모드 출력\n");
@@ -411,6 +414,29 @@ public class CMClientWinApp extends JFrame{
                     setTitle("CMClientWinApp ("+interInfo.getMyself().getName()+")");  // 프레임의 타이틀 재설정
                     
                     setButtonsAccordingToClientState();  // 클라이언트 상태에 맞게 버튼 재설정
+
+                    File file = new File("C:\\Users\\yido0\\IntelilJ-Workspace\\CMApp\\client-file-path\\" + strUserName);
+                    file.mkdir();
+
+                    m_clientStub.setTransferedFileHome(Paths.get(file.toURI()));  // 파일 경로 변경
+
+                    class threads extends java.lang.Thread {
+                        public void run() {
+                            try {
+                                watchService(file.toString());
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    }
+
+                    threads th = new threads();
+                    th.start();
+
+                    listUpDir(file.toString());
+
                 }
             } else {  // 로그인 요청에 실패한 경우
                 printStyledMessage("로그인 요청에 실패했습니다.\n", "bold");
@@ -482,8 +508,7 @@ public class CMClientWinApp extends JFrame{
         }
     }
 
-    public void testDummyEvent(String constMsg, String fileSender)  // 파일 수신 완료 메시지 전달용으로 testDummyEvent() 오버로딩
-    {
+    public void testDummyEvent(String constMsg, String fileSender) { // 파일 수신 완료 메시지 전달용으로 testDummyEvent() 오버로딩
         String strMessage = constMsg;  // 파일 수신 완료 메시지
         String strTarget = fileSender;  // 파일 송신자
         CMDummyEvent due = null;  // 이벤트
@@ -500,17 +525,17 @@ public class CMClientWinApp extends JFrame{
         m_clientStub.send(due, strTarget);  // 수신 완료 메시지 전달
     }
 
-    private void testSetFilePath() {  // 파일의 경로를 변경하는 메소드
-        printMessage("====== 파일 경로 설정\n");
-        String strPath = null;  // 파일 경로 초기화
-
-        strPath = JOptionPane.showInputDialog("파일 경로: ");  // 경로로 설정할 위치 입력
-        if(strPath == null) return;  // 경로를 입력하지 않으면 바로 리턴
-
-        m_clientStub.setTransferedFileHome(Paths.get(strPath));  // 파일 경로 변경
-
-        printMessage("======\n");
-    }
+//    private void testSetFilePath() {  // 파일의 경로를 변경하는 메소드
+//        printMessage("====== 파일 경로 설정\n");
+//        String strPath = null;  // 파일 경로 초기화
+//
+//        strPath = JOptionPane.showInputDialog("파일 경로: ");  // 경로로 설정할 위치 입력
+//        if(strPath == null) return;  // 경로를 입력하지 않으면 바로 리턴
+//
+//        m_clientStub.setTransferedFileHome(Paths.get(strPath));  // 파일 경로 변경
+//
+//        printMessage("======\n");
+//    }
 
     private void testRequestFile() {  // 파일 요청 메소드
         boolean bReturn = false;  // 파일 요청 이상 여부
@@ -626,98 +651,164 @@ public class CMClientWinApp extends JFrame{
         printMessage("======\n");
     }
 
-//    private void testOpenFileSyncFolder() {  // 파일 동기화 폴더 열기 메소드
-//        printMessage("========== 파일 동기화 폴더 열기\n");
-//
-//        Path syncHome = m_clientStub.getFileSyncHome();  // 파일 동기화 폴더 가져오기
-//        if(syncHome == null) {  // 파일 동기화 폴더가 없을 경우
-//            printStyledMessage("파일 동기화 폴더가 없습니다.\n", "bold");
-//            printStyledMessage("더 자세한 정보는 콘솔 창의 에러 메시지를 참조하세요.\n", "bold");
-//            return;
-//        }
+    private void testPushFilebySycn() {  // 클라이언트에게 파일 전송 메소드
+        String strFilePath = null;  // 파일 경로
+        File[] files = null;  // 파일 이름
+        String strReceiver = null;  // 파일 수신자
+        byte byteFileAppendMode = -1;  // 파일 전송 모드
+        CMInteractionInfo interInfo = m_clientStub.getCMInfo().getInteractionInfo();
+        boolean bReturn = false;  // 파일 전송 이상 여부
 
-//        Desktop desktop = Desktop.getDesktop();
-//        try {
-//            desktop.open(syncHome.toFile());  // 파일 동기화 폴더 열기
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
+        printMessage("====== 파일 전송\n");
 
-//    private void testStartFileSyncWithManualMode() {
-//        printMessage("========== 수동 모드로 파일 동기화를 시작합니다.\n");
-//
-//        m_eventHandler.setStartTimeOfFileSync(System.currentTimeMillis());
-//
-//        boolean ret = m_clientStub.startFileSync(CMFileSyncMode.MANUAL);
-//        if(!ret) {
-//            printStyledMessage("수동 모드로 파일 동기화를 시작하는데 에러가 발생했습니다.\n", "bold");
-//            m_eventHandler.setStartTimeOfFileSync(0);
-//        }
-//        else {
-//            printMessage("수동 모드로 파일 동기화 시작.\n");
-//        }
-//    }
+        JTextField freceiverField = new JTextField();  // 수신자 입력 필드
+        String[] fAppendMode = {"기본값", "덮어쓰기", "덧붙이기"};  // 파일 전송 모드 필드
+        JComboBox<String> fAppendBox = new JComboBox<String>(fAppendMode);  // 콤보 박스로 파일 전송 모드 설정
 
-//    private void testStopFileSync() {
-//        printMessage("========== 파일 동기화를 정지합니다.\n");
-//        boolean ret = m_clientStub.stopFileSync();
-//        if(!ret) {
-//            printStyledMessage("파일 동기화 정지 에러.\n", "bold");
-//        }
-//        else {
-//            printMessage("파일 동기화 정지.\n");
-//        }
-//    }
+        Object[] message = {  // 파일 수신자, 파일 전송 모드를 담는 배열
+                "파일 수신자(공백은 기본 서버): ", freceiverField,
+                "파일 추가 모드: ", fAppendBox
+        };
+        int option = JOptionPane.showConfirmDialog(null, message, "파일 전송", JOptionPane.OK_CANCEL_OPTION);  // 파일 전송 확인 창
+        if(option == JOptionPane.CANCEL_OPTION || option != JOptionPane.OK_OPTION) {  // 파일 전송 취소 시
+            printMessage("취소했습니다.\n");
+            return;
+        }
 
-//    private void testPrintCurrentFileSyncMode() {
-//        printMessage("========== 현재 파일 동기화 모드 출력\n");
-//        CMFileSyncMode currentMode = m_clientStub.getCurrentFileSyncMode();
-//        if(currentMode == null) {
-//            printStyledMessage("에러 발생! 더 많은 정보를 확인하기 위해서는 콘솔의 에러 메시지를 확인하세요.\n",
-//                    "bold");
-//            return;
-//        }
-//        printMessage("현재 파일 동기화 모드: "+currentMode+".\n");
-//    }
+        strReceiver = freceiverField.getText().trim();  // 입력한 파일 수신자의 좌우 띄어쓰기 제거
+        if(strReceiver.isEmpty())  // 파일 수신자를 입력하지 않은 경우
+            strReceiver = interInfo.getDefaultServerInfo().getServerName();  // 파일 수신자를 서버로 설정
 
-    private void getClockTime() {
-        int time = clock.getTime(Long.valueOf(pId).intValue());
-        printMessage("현재 시간: " + time + "\n");
-    }
+        switch(fAppendBox.getSelectedIndex()) {  // 파일 전송 모드
+            case 0:  // 기본값으로 설정
+                byteFileAppendMode = CMInfo.FILE_DEFAULT;
+                break;
+            case 1:  // 덮어쓰기로 설정
+                byteFileAppendMode = CMInfo.FILE_OVERWRITE;
+                break;
+            case 2:  // 덧붙이기로 설정
+                byteFileAppendMode = CMInfo.FILE_APPEND;
+                break;
+        }
 
-    private void socketCommunication() {
-        BufferedReader in = null;
-        BufferedWriter out = null;
-        Socket socket = null;
-        Scanner scanner = new Scanner(System.in);
-        try {
-            socket = new Socket("localhost", 9999);
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            while(true) {
-                System.out.print("보내기>>");
-                String outputMessage = scanner.nextLine();
-                if(outputMessage.equalsIgnoreCase("bye")) {
-                    out.write(outputMessage + "\n");
-                    out.flush();
-                    break;
-                }
-                out.write(outputMessage + "\n");
-                out.flush();
-                String inputMessage = in.readLine();
-                System.out.println("서버: " + inputMessage);
-            }
-        } catch(IOException e) {
-            System.out.println(e.getMessage());
-        } finally {
-            try {
-                scanner.close();
-                if(socket != null) socket.close();
-            } catch(IOException e) {
-                System.out.println("서버와의 채팅 중 오류가 발생했습니다.");
+        JFileChooser fc = new JFileChooser();  // 파일 선택자 생성
+        fc.setMultiSelectionEnabled(true);  // 여러 파일 선택 가능하도록 설정
+        CMConfigurationInfo confInfo = m_clientStub.getCMInfo().getConfigurationInfo();  // CM 설정 가져오기
+        File curDir = new File(confInfo.getTransferedFileHome().toString());  // 파일 현재 경로 가져오기
+        fc.setCurrentDirectory(curDir);  // 파일 현재 경로
+        int fcRet = fc.showOpenDialog(this);  // 열기 창
+        if(fcRet != JFileChooser.APPROVE_OPTION) return;
+        files = fc.getSelectedFiles();  // 선택한 파일
+        if(files.length < 1) return;  // 선택한 파일이 없을 경우 바로 리턴
+        for(int i=0; i < files.length; i++) {  // 선택한 파일이 한 개 이상일 경우
+            strFilePath = files[i].getPath();  // 각 파일마다 경로 가져오기
+            testDummyEvent("최종수신자=" + strReceiver + "=파일이름=" + strFilePath, "SERVER");
+            strReceiver = interInfo.getDefaultServerInfo().getServerName();
+            bReturn = m_clientStub.pushFile(strFilePath, strReceiver, byteFileAppendMode);  // 파일 전송
+            if(!bReturn) {  // 파일 전송이 실패한 발생한 경우
+                printMessage("파일 전송 오류 파일("+strFilePath+"), 수신자(" +strReceiver+")\n");
             }
         }
+
+        printMessage("======\n");
+    }
+
+    private void testSyncFile() {  // 파일 동기화 메소드
+        testDummyEvent("시간-" + clock.getTime(), "SERVER");
+        CMInteractionInfo interInfo = m_clientStub.getCMInfo().getInteractionInfo();  // 서버 이름 가져오기
+        CMConfigurationInfo confInfo = m_clientStub.getCMInfo().getConfigurationInfo();  // CM 설정 가져오기
+        File curDir = new File(confInfo.getTransferedFileHome().toString());  // 파일 현재 경로 가져오기
+        String strFilePath = null;  // 파일 경로
+        File[] files = curDir.listFiles();  // 파일 이름
+        String strReceiver = interInfo.getDefaultServerInfo().getServerName();  // 파일 수신자
+        byte byteFileAppendMode = 1;  // 파일 전송 모드 = 덮어쓰기
+        boolean bReturn = false;  // 파일 전송 이상 여부
+
+        for(int i=0; i < files.length; i++) {  // 선택한 파일이 한 개 이상일 경우
+            strFilePath = files[i].getPath();  // 각 파일마다 경로 가져오기
+            bReturn = m_clientStub.pushFile(strFilePath, strReceiver, byteFileAppendMode);  // 파일 전송
+            if(!bReturn) {  // 파일 전송이 실패한 발생한 경우
+                printMessage("파일 전송 오류 파일("+strFilePath+"), 수신자(" +strReceiver+")\n");
+            }
+        }
+        printMessage("동기화 완료!\n");
+        printMessage("======\n");
+    }
+
+    private void watchService(String dir) throws IOException, InterruptedException {
+        WatchService service = FileSystems.getDefault().newWatchService();
+        Path path = Paths.get(dir);
+        path.register(service,
+                StandardWatchEventKinds.ENTRY_CREATE,
+                StandardWatchEventKinds.ENTRY_DELETE,
+                StandardWatchEventKinds.ENTRY_MODIFY);
+
+        while(true) {
+            WatchKey key = service.take();
+            List<WatchEvent<?>> list = key.pollEvents();
+            for(WatchEvent<?> event: list) {
+                WatchEvent.Kind<?> kind = event.kind();
+                Path pth = (Path)event.context();
+                if(kind.equals(StandardWatchEventKinds.ENTRY_CREATE)) {
+                    printMessage("생성: " + pth.getFileName() + "\n");
+                    testSyncFile();
+                    listUpDir(dir);
+                } else if(kind.equals(StandardWatchEventKinds.ENTRY_DELETE)) {
+                    printMessage("삭제: " + pth.getFileName()+ "\n");
+                    testDummyEvent("삭제-" + pth.getFileName().toString(), "SERVER");
+                    listUpDir(dir);
+                } else if(kind.equals(StandardWatchEventKinds.ENTRY_MODIFY)) {
+                    printMessage("수정: " + pth.getFileName()+ "\n");
+                    clock.increment();
+//                    testDummyEvent("시간-" + clock.getTime(), "SERVER");
+                    testSyncFile();
+                    listUpDir(dir);
+                } else if(kind.equals(StandardWatchEventKinds.OVERFLOW)) {
+                    System.out.println("OVERFLOW");
+                }
+            }
+            if(!key.reset()) break;
+        }
+        service.close();
+    }
+
+    public void listUpDir(String dir) {  // 탐색한 파일을 패널에 표시하는 메소드
+        StyledDocument doc = m_dirPane.getStyledDocument();  // 스타일 정보 가져오기
+
+        try {
+            m_dirPane.setText("");  // 패널의 텍스트 초기화
+            // 패널에 텍스트 출력
+            doc.insertString(doc.getLength(), "사용자 디렉토리, 파일 목록\n", null);
+            m_dirPane.setCaretPosition(m_dirPane.getDocument().getLength());
+        } catch (BadLocationException e) {  // 에러 처리
+            e.printStackTrace();
+        }
+
+        scanFile(dir);  // 탐색 시작
+    }
+
+    public void scanFile(String strDirPath) {  // 파일 탐색 메소드
+        StyledDocument doc = m_dirPane.getStyledDocument();  // 스타일 정보 가져오기
+        File path = new File(strDirPath);
+        File[] fList = path.listFiles();
+
+        for(int i = 0; i < fList.length; i++) {
+            if(fList[i].isFile()) {
+                try {
+                    doc.insertString(doc.getLength(), fList[i].getPath() +"\n", null);
+                    m_dirPane.setCaretPosition(m_dirPane.getDocument().getLength());
+                } catch (BadLocationException e) {
+                    e.printStackTrace();
+                    throw new RuntimeException(e);
+                }
+            } else if(fList[i].isDirectory()) {
+                scanFile(fList[i].getPath());
+            }
+        }
+    }
+
+    private void noticeTime() {
+        printMessage("현재 시간: " + clock.getTime() + "\n");
     }
 
     public void testTerminateCM() {  // 클라이언트 종료 메소드

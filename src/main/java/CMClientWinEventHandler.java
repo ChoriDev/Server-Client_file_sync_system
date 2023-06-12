@@ -51,7 +51,6 @@ public class CMClientWinEventHandler implements CMAppEventHandler {
 
     @Override
     public void processEvent(CMEvent cme) {  // event를 받는 processEvent 메소드 오버라이드
-        m_client.clock.increment(Long.valueOf(m_client.pId).intValue());
         switch(cme.getType()) {
             case CMInfo.CM_SESSION_EVENT:  // 로그인 이벤트의 경우
                 processSessionEvent(cme);  // 로그인 이벤트 메소드 실행
@@ -137,7 +136,7 @@ public class CMClientWinEventHandler implements CMAppEventHandler {
 
     private void processDummyEvent(CMEvent cme) {  // 메시지 전송 관련 메소드
         CMDummyEvent due = (CMDummyEvent) cme;
-        printMessage("세션(" + due.getHandlerSession() + "), 그룹(" + due.getHandlerGroup() + "), 유저(" + due.getSender() + ")가 메시지를 보냈습니다.\n");
+//        printMessage("세션(" + due.getHandlerSession() + "), 그룹(" + due.getHandlerGroup() + "), 유저(" + due.getSender() + ")가 메시지를 보냈습니다.\n");
         printMessage("메시지: " + due.getDummyInfo() + "\n");
         return;
     }
@@ -187,11 +186,11 @@ public class CMClientWinEventHandler implements CMAppEventHandler {
                 break;
             case CMFileEvent.START_FILE_TRANSFER:  // 파일 전송을 시작한 경우
             case CMFileEvent.START_FILE_TRANSFER_CHAN:
-                printMessage("["+fe.getFileSender()+"] 송신자가 파일을 보냅니다. ("+fe.getFileName()+").\n");
+//                printMessage("["+fe.getFileSender()+"] 송신자가 파일을 보냅니다. ("+fe.getFileName()+").\n");
                 break;
             case CMFileEvent.END_FILE_TRANSFER:  // 파일 전송이 끝난 경우
             case CMFileEvent.END_FILE_TRANSFER_CHAN:
-                printMessage("["+fe.getFileSender()+"] 송신자가 파일 전송을 완료했습니다. ("+fe.getFileName()+", " +fe.getFileSize()+" Bytes).\n");
+//                printMessage("["+fe.getFileSender()+"] 송신자가 파일 전송을 완료했습니다. ("+fe.getFileName()+", " +fe.getFileSize()+" Bytes).\n");
 
                 m_client.testDummyEvent("수신자가 파일 수신을 완료했습니다.", fe.getFileSender());  // 수신자가 파일을 받았는지 메시지 출력
 

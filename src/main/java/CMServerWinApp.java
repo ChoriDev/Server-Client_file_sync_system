@@ -4,8 +4,9 @@ import java.awt.event.*;
 import java.lang.management.ManagementFactory;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.util.*;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Style;
@@ -25,17 +26,17 @@ public class CMServerWinApp extends JFrame {
     private CMServerWinEventHandler m_eventHandler;  // CMServerEventHandler 타입 레퍼런스 변수 m_eventHandler 선언
     private JPanel m_pnlCenter;  // Gui에 사용할 변수, 출력 메시지 패널과 접속 중인 사용자 표시 패널을 담음
     private JTextPane m_memberPane;  // Gui에 사용할 변수, 현재 접속 중인 사용자를 출력할 패널
+    private JTextPane m_dirPane;  // Gui에 사용할 변수, 현재 파일 목록을 출력할 패널
     private JTextPane m_outTextPane;  // Gui에 사용할 변수, 메시지를 출력할 패널
     private JTextField m_inTextField;  // Gui에 사용할 변수, 입력을 할 수 있는 텍스트 상자
     private JButton m_startStopButton;  // Gui에 사용할 변수, 서버 시작과 종료를 할 수 있는 버튼
-    long pId = ManagementFactory.getRuntimeMXBean().getPid();
-    VectorClock clock = new VectorClock(100000000);
+    LogicalClock clock = new LogicalClock();
 
     public CMServerWinApp() {  // CMServerApp 생성자
         CMServerWinApp.MyKeyListener cmKeyListener = new MyKeyListener();  // 키 이벤트 리스너 객체 생성
         CMServerWinApp.MyActionListener cmActionListener = new MyActionListener();  // 액션 이벤트 리스너 객체 생성
         setTitle("CMServerWinApp");  // 프레임의 타이틀 설정
-        setSize(500, 500);  // 프레임 크기 설정
+        setSize(1000, 600);  // 프레임 크기 설정
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);  // 닫기 버튼을 클릭하면 프로그램 종료 설정
 
         setLayout(new BorderLayout());  // 프레임의 배치를 BorderLayout으로 설정
@@ -57,6 +58,11 @@ public class CMServerWinApp extends JFrame {
         m_memberPane.setEditable(false);  // 패널 편집이 불가능하도록 설정
         JScrollPane leftScroll = new JScrollPane(m_memberPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);  // 스크롤 패널 생성
         m_pnlCenter.add(leftScroll);  // pnlCenter 패널에 배치
+
+        m_dirPane = new JTextPane();  // 현재 파일 목록을 출력할 패널 생성
+        m_dirPane.setEditable(false);  // 패널 편집이 불가능하도록 설정
+        JScrollPane rightScroll = new JScrollPane(m_dirPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);  // 스크롤 패널 생성
+        m_pnlCenter.add(rightScroll);  // pnlCenter 패널에 배치
 
         m_inTextField = new JTextField();  // 메시지를 입력할 텍스트 필드 생성
         m_inTextField.addKeyListener(cmKeyListener);  // 텍스트 필드에 키 이벤트 리스너 부착
@@ -91,13 +97,6 @@ public class CMServerWinApp extends JFrame {
     }
 
     public void processInput(String strInput) {  // 입력한 값에 따라 각각의 기능을 호출하는 메소드
-//        int nCommand = -1;  // 입력한 값
-//        try {  // 입력한 값을 정수로 변환
-//            nCommand = Integer.parseInt(strInput);
-//        } catch (NumberFormatException e) {  // 기능을 수행할 수 있는 입력이 아닌 경우 에러 처리
-//            printMessage("잘못된 입력입니다!\n");
-//            return;
-//        }
 
         switch(strInput) {
             case "모든 기능 표시":  // 사용 가능한 모든 기능 표시
@@ -118,14 +117,8 @@ public class CMServerWinApp extends JFrame {
             case "파일 전송": // 파일 전송
                 pushFile();
                 break;
-            case "소켓 통신":  // 소켓 통신
-                socketCommunication();
-                break;
-//            case 70: // 파일 동기화 폴더 열기
-//                openFileSyncFolder();
-//                break;
-            case "시간 확인":  // Logical Clock 확인
-                getClockTime();
+            case "시간 확인":
+                noticeTime();
                 break;
             default:
                 printStyledMessage("없는 기능입니다.\n", "bold");
@@ -267,6 +260,26 @@ public class CMServerWinApp extends JFrame {
             printStyledMessage("서버 시작\n", "bold");
             printStyledMessage("사용할 기능을 입력하세요.\n", "bold");
             printAllMenus();
+
+            File file = new File("C:\\Users\\yido0\\IntelilJ-Workspace\\CMApp\\server-file-path");
+
+            class threads extends java.lang.Thread {
+                public void run() {
+                    try {
+                        watchService(file.toString(), null);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+
+            threads th = new threads();
+            th.start();
+
+            listUpDir();
+
             m_startStopButton.setEnabled(true);  // 버튼 활성화
             m_startStopButton.setText("서버 종료");  // 서버 종료로 버튼 바꾸기
         } else {  // 정상적으로 서버 시작이 안된 경우 에러 발생
@@ -283,7 +296,6 @@ public class CMServerWinApp extends JFrame {
         printMessage("메시지 보내기\n");
         printMessage("---------------------------------- 파일 전송\n");
         printMessage("파일 요청, 파일 전송\n");
-        printMessage("소켓 통신\n");
 //        printMessage("---------------------------------- 파일 동기화\n");
 //        printMessage("70: 동기화 폴더 열기\n");
         printMessage("---------------------------------- 프로세스\n");
@@ -456,66 +468,103 @@ public class CMServerWinApp extends JFrame {
         printMessage("======\n");
     }
 
-//    private void openFileSyncFolder() {  // 파일 동기화 폴더 열기 메소드
-//        printMessage("=========== 파일 동기화 폴더 열기\n");
-//        String userName = JOptionPane.showInputDialog("사용자 이름:");  // 클라이언트 이름 묻기
-//        if(userName != null) {
-//            Path syncHome = m_serverStub.getFileSyncHome(userName);  // 사용자의 동기화 폴더 가져오기
-//            if(syncHome == null) {  // 파일 동기화 폴더가 없을 경우
-//                printStyledMessage("파일 동기화 폴더가 없습니다.\n", "bold");
-//                printStyledMessage("더 자세한 정보는 콘솔 창의 에러 메시지를 참조하세요.\n", "bold");
-//                return;
-//            }
-//            Desktop desktop = Desktop.getDesktop();
-//            try {
-//                desktop.open(syncHome.toFile());  // 파일 동기화 폴더 열기
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//    }
+    public void pushFile(String filePath, String receiver) {  // 파일 전송 메소드 오버라이딩
+        String strFilePath = null;  // 파일 경로
+        File[] files;  // 파일 이름
+        String strReceiver = null;  // 파일 수신자
+        byte byteFileAppendMode = CMInfo.FILE_OVERWRITE;  // 파일 전송 모드
+        boolean bReturn = false;  // 파일 전송 이상 여부
 
-    private void getClockTime() {
-        int time = clock.getTime(Long.valueOf(pId).intValue());
-        printMessage("현재 시간: " + time + "\n");
+        strFilePath = filePath;
+        strReceiver = receiver;
+
+        bReturn = m_serverStub.pushFile(strFilePath, strReceiver, byteFileAppendMode);  // 파일 전송
+
+        if(!bReturn) {  // 파일 전송이 실패한 경우
+            printMessage("파일 전송 오류. 파일("+strFilePath+"), 수신자(" +strReceiver+").\n");
+        }
+        printMessage("======\n");
     }
 
-    public void socketCommunication() {
-        BufferedReader in = null;
-        BufferedWriter out = null;
-        ServerSocket listener = null;
-        Socket socket = null;
-        Scanner scanner = new Scanner(System.in);  // 키보드에서 읽을 scanner 객체 생성
-        try {
-            listener = new ServerSocket(9999); // 서버 소켓 생성
-            System.out.println("연결을 기다리고 있습니다.....");
-            socket = listener.accept(); // 클라이언트로부터 연결 요청 대기
-            System.out.println("연결되었습니다.");
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            while(true) {
-                String inputMessage = in.readLine(); // 클라이언트로부터 한 행 읽기
-                if(inputMessage.equalsIgnoreCase("bye")) {
-                    System.out.println("클라이언트에서 bye로 연결을 종료하였음");
-                    break;
+    public void watchService(String dir, String temp) throws IOException, InterruptedException {
+        WatchService service = FileSystems.getDefault().newWatchService();
+        Path path = Paths.get(dir);
+        path.register(service,
+                StandardWatchEventKinds.ENTRY_CREATE,
+                StandardWatchEventKinds.ENTRY_DELETE,
+                StandardWatchEventKinds.ENTRY_MODIFY);
+
+        while(true) {
+            WatchKey key = service.take();
+            List<WatchEvent<?>> list = key.pollEvents();
+            for(WatchEvent<?> event: list) {
+                WatchEvent.Kind<?> kind = event.kind();
+                Path pth = (Path)event.context();
+                if(kind.equals(StandardWatchEventKinds.ENTRY_CREATE)) {
+                    System.out.println("생성: " + pth.getFileName());
+                    listUpDir();
+                } else if(kind.equals(StandardWatchEventKinds.ENTRY_DELETE)) {
+                    System.out.println("삭제: " + pth.getFileName());
+                    listUpDir();
+                } else if(kind.equals(StandardWatchEventKinds.ENTRY_MODIFY)) {
+                    System.out.println("수정: " + pth.getFileName());
+                    clock.increment();
+                    listUpDir();
+                } else if(kind.equals(StandardWatchEventKinds.OVERFLOW)) {
+                    System.out.println("OVERFLOW");
                 }
-                System.out.println("클라이언트: " + inputMessage);
-                System.out.print("보내기>>"); // 프롬프트
-                String outputMessage = scanner.nextLine(); // 키보드에서 한 행 읽기
-                out.write(outputMessage + "\n"); // 키보드에서 읽은 문자열 전송
-                out.flush();
             }
-        } catch(IOException e) {
-            System.out.println(e.getMessage());
-        } finally {
-            try {
-                scanner.close();
-                socket.close();
-                listener.close();
-            } catch (IOException e) {
-                System.out.println("클라이언트와 채팅 중 오류가 발생했습니다.");
+            if(!key.reset()) break;
+        }
+        service.close();
+    }
+
+    public void deleteFile(String userName, String fileName) {
+        File file = new File("C:\\Users\\yido0\\IntelilJ-Workspace\\CMApp\\server-file-path\\" + userName + "\\" + fileName);
+//        printMessage(userName);
+        if(file.exists()) {
+            file.delete();
+        }
+    }
+
+    public void listUpDir() {  // 탐색한 파일을 패널에 표시하는 메소드
+        StyledDocument doc = m_dirPane.getStyledDocument();  // 스타일 정보 가져오기
+        String pth = "C:\\Users\\yido0\\IntelilJ-Workspace\\CMApp\\server-file-path";  // 탐색할 디렉토리
+
+        try {
+            m_dirPane.setText("");  // 패널의 텍스트 초기화
+            // 패널에 텍스트 출력
+            doc.insertString(doc.getLength(), "서버 디렉토리, 파일 목록\n", null);
+            m_dirPane.setCaretPosition(m_dirPane.getDocument().getLength());
+        } catch (BadLocationException e) {  // 에러 처리
+            e.printStackTrace();
+        }
+
+        scanFile(pth);  // 탐색 시작
+    }
+
+    public void scanFile(String strDirPath) {  // 파일 탐색 메소드
+        StyledDocument doc = m_dirPane.getStyledDocument();  // 스타일 정보 가져오기
+        File path = new File(strDirPath);
+        File[] fList = path.listFiles();
+
+        for(int i = 0; i < fList.length; i++) {
+            if(fList[i].isFile()) {
+                try {
+                    doc.insertString(doc.getLength(), fList[i].getPath() +"\n", null);
+                    m_dirPane.setCaretPosition(m_dirPane.getDocument().getLength());
+                } catch (BadLocationException e) {
+                    e.printStackTrace();
+                    throw new RuntimeException(e);
+                }
+            } else if(fList[i].isDirectory()) {
+                scanFile(fList[i].getPath());
             }
         }
+    }
+
+    private void noticeTime() {
+        printMessage("현재 시간: " + clock.getTime() + "\n");
     }
 
     public void terminateCM() {  // 서버 종료 메소드
